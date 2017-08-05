@@ -52,9 +52,13 @@ type config struct {
 	remoteTimeout           time.Duration
 	listenAddr              string
 	telemetryPath           string
+	showVersion             bool
 }
 
 var (
+	branchID        string
+	commitID        string
+	buildDate       string
 	receivedSamples = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "received_samples_total",
@@ -94,6 +98,10 @@ func init() {
 
 func main() {
 	cfg := parseFlags()
+	if cfg.showVersion {
+		fmt.Fprintf(os.Stderr, "remote_storage_adapter-%s-%s-%s\n", branchID, commitID, buildDate)
+		os.Exit(1)
+	}
 	http.Handle(cfg.telemetryPath, prometheus.Handler())
 
 	writers, readers := buildClients(cfg)
@@ -134,6 +142,7 @@ func parseFlags() *config {
 	)
 	flag.StringVar(&cfg.listenAddr, "web.listen-address", ":9201", "Address to listen on for web endpoints.")
 	flag.StringVar(&cfg.telemetryPath, "web.telemetry-path", "/metrics", "Address to listen on for web endpoints.")
+	flag.BoolVar(&cfg.showVersion, "version", false, "Display program version and exits.")
 
 	flag.Parse()
 
