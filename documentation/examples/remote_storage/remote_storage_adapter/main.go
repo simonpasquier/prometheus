@@ -22,6 +22,7 @@ import (
 	_ "net/http/pprof"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -283,7 +284,9 @@ func protoToSamples(req *remote.WriteRequest) model.Samples {
 	for _, ts := range req.Timeseries {
 		metric := make(model.Metric, len(ts.Labels))
 		for _, l := range ts.Labels {
-			metric[model.LabelName(l.Name)] = model.LabelValue(l.Value)
+			if !strings.Contains(l.Value, "\n") {
+				metric[model.LabelName(l.Name)] = model.LabelValue(l.Value)
+			}
 		}
 
 		for _, s := range ts.Samples {
