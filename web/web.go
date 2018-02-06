@@ -78,6 +78,7 @@ type Handler struct {
 	tsdb          func() *tsdb.DB
 	storage       storage.Storage
 	notifier      *notifier.Manager
+	tracer        opentracing.Tracer
 
 	apiV1 *api_v1.API
 
@@ -128,6 +129,7 @@ type Options struct {
 	ScrapeManager *scrape.Manager
 	RuleManager   *rules.Manager
 	Notifier      *notifier.Manager
+	Tracer        opentracing.Tracer
 	Version       *PrometheusVersion
 	Flags         map[string]string
 
@@ -175,10 +177,15 @@ func New(logger log.Logger, o *Options) *Handler {
 		tsdb:          o.TSDB,
 		storage:       o.Storage,
 		notifier:      o.Notifier,
+		tracer:        o.Tracer,
 
 		now: model.Now,
 
 		ready: 0,
+	}
+
+	if h.tracer == nil {
+		h.tracer = &opentracing.NoopTracer{}
 	}
 
 	h.apiV1 = api_v1.NewAPI(h.queryEngine, h.storage, h.scrapeManager, h.notifier,
@@ -447,7 +454,7 @@ func (h *Handler) Run(ctx context.Context) error {
 	errlog := stdlog.New(log.NewStdlibAdapter(level.Error(h.logger)), "", 0)
 
 	httpSrv := &http.Server{
-		Handler:     nethttp.Middleware(opentracing.GlobalTracer(), mux, operationName),
+		Handler:     nethttp.Middleware(h.tracer, mux, operationName),
 		ErrorLog:    errlog,
 		ReadTimeout: h.options.ReadTimeout,
 	}
