@@ -39,6 +39,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/version"
+	jconfig "github.com/uber/jaeger-client-go/config"
+	jlog "github.com/uber/jaeger-lib/client/log/go-kit"
+	jprom "github.com/uber/jaeger-lib/metrics/prometheus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	k8s_runtime "k8s.io/apimachinery/pkg/util/runtime"
 
@@ -94,6 +97,7 @@ func main() {
 		lookbackDelta    model.Duration
 		webTimeout       model.Duration
 		queryTimeout     model.Duration
+		jaegerAgent      string
 
 		prometheusURL string
 
@@ -180,6 +184,9 @@ func main() {
 	a.Flag("query.max-concurrency", "Maximum number of queries executed concurrently.").
 		Default("20").IntVar(&cfg.queryEngine.MaxConcurrentQueries)
 
+	a.Flag("tracing.jaeger-agent", "Address of the Jaeger agent.").
+		Default("").StringVar(&cfg.jaegerAgent)
+
 	promlogflag.AddFlags(a, &cfg.logLevel)
 
 	_, err := a.Parse(os.Args[1:])
@@ -212,6 +219,30 @@ func main() {
 	cfg.queryEngine.Timeout = time.Duration(cfg.queryTimeout)
 
 	logger := promlog.New(cfg.logLevel)
+
+	if cfg.jaegerAgent != "" {
+		jcfg := jconfig.Configuration{
+			Sampler: &jconfig.SamplerConfig{
+				Type:  "const",
+				Param: 1,
+			},
+			Reporter: &jconfig.ReporterConfig{
+				LogSpans:            false,
+				BufferFlushInterval: 1 * time.Second,
+				LocalAgentHostPort:  cfg.jaegerAgent,
+			},
+		}
+		tracer, closer, err := jcfg.New(
+			"prometheus",
+			jconfig.Logger(jlog.NewLogger(log.With(logger, "component", "jaeger"))),
+			jconfig.Metrics(jprom.New(jprom.WithRegisterer(prometheus.DefaultRegisterer))),
+		)
+		if err != nil {
+			level.Error(logger).Log("msg", "Cannot initialize Jaeger tracer", "agent", cfg.jaegerAgent)
+		}
+		cfg.web.Tracer = tracer
+		defer closer.Close()
+	}
 
 	// XXX(fabxc): Kubernetes does background logging which we can only customize by modifying
 	// a global variable.
