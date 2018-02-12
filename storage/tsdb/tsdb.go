@@ -193,20 +193,31 @@ type querier struct {
 }
 
 func (q querier) Select(oms ...*labels.Matcher) (storage.SeriesSet, error) {
-	span, _ := opentracing.StartSpanFromContext(q.ctx, "Select")
-	defer span.Finish()
+	var err error
+
+	if span := opentracing.SpanFromContext(q.ctx); span != nil {
+		span := span.Tracer().StartSpan("Select", opentracing.ChildOf(span.Context()))
+		lbls := make([]string, 0, len(oms))
+		for _, om := range oms {
+			lbls = append(lbls, om.String())
+		}
+		span.SetTag("datastore", "local")
+		span.SetTag("labels", strings.Join(lbls, ","))
+		defer func() {
+			if err != nil {
+				ext.Error.Set(span, true)
+			}
+			span.Finish()
+		}()
+	}
 
 	ms := make([]tsdbLabels.Matcher, 0, len(oms))
-	lbls := make([]string, 0, len(oms))
 
 	for _, om := range oms {
 		ms = append(ms, convertMatcher(om))
-		lbls = append(lbls, om.String())
 	}
-	span.SetTag("labels", strings.Join(lbls, ","))
 	set, err := q.q.Select(ms...)
 	if err != nil {
-		ext.Error.Set(span, true)
 		return nil, err
 	}
 	return seriesSet{set: set}, nil
