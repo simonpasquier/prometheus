@@ -15,11 +15,14 @@ package tsdb
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
 
 	"github.com/go-kit/kit/log"
+	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
@@ -166,12 +169,12 @@ func (a adapter) StartTime() (int64, error) {
 	return startTime + a.startTimeMargin, nil
 }
 
-func (a adapter) Querier(_ context.Context, mint, maxt int64) (storage.Querier, error) {
+func (a adapter) Querier(ctx context.Context, mint, maxt int64) (storage.Querier, error) {
 	q, err := a.db.Querier(mint, maxt)
 	if err != nil {
 		return nil, err
 	}
-	return querier{q: q}, nil
+	return querier{q: q, ctx: ctx}, nil
 }
 
 // Appender returns a new appender against the storage.
@@ -185,17 +188,25 @@ func (a adapter) Close() error {
 }
 
 type querier struct {
-	q tsdb.Querier
+	ctx context.Context
+	q   tsdb.Querier
 }
 
 func (q querier) Select(oms ...*labels.Matcher) (storage.SeriesSet, error) {
+	span, _ := opentracing.StartSpanFromContext(q.ctx, "Select")
+	defer span.Finish()
+
 	ms := make([]tsdbLabels.Matcher, 0, len(oms))
+	lbls := make([]string, 0, len(oms))
 
 	for _, om := range oms {
 		ms = append(ms, convertMatcher(om))
+		lbls = append(lbls, om.String())
 	}
+	span.SetTag("labels", strings.Join(lbls, ","))
 	set, err := q.q.Select(ms...)
 	if err != nil {
+		ext.Error.Set(span, true)
 		return nil, err
 	}
 	return seriesSet{set: set}, nil

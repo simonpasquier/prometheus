@@ -27,6 +27,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/pkg/labels"
 	"github.com/prometheus/prometheus/pkg/timestamp"
@@ -121,11 +122,14 @@ func (q *query) Cancel() {
 
 // Exec implements the Query interface.
 func (q *query) Exec(ctx context.Context) *Result {
-	if span := opentracing.SpanFromContext(ctx); span != nil {
-		span.SetTag(queryTag, q.stmt.String())
-	}
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Exec")
+	span.SetTag(queryTag, q.stmt.String())
+	defer span.Finish()
 
 	res, err := q.ng.exec(ctx, q)
+	if err != nil {
+		ext.Error.Set(span, true)
+	}
 	return &Result{Err: err, Value: res}
 }
 

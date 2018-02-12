@@ -35,6 +35,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/oklog/oklog/pkg/group"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
@@ -240,7 +241,7 @@ func main() {
 		if err != nil {
 			level.Error(logger).Log("msg", "Cannot initialize Jaeger tracer", "agent", cfg.jaegerAgent)
 		}
-		cfg.web.Tracer = tracer
+		opentracing.SetGlobalTracer(tracer)
 		defer closer.Close()
 	}
 
