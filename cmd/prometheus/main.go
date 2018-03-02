@@ -224,8 +224,8 @@ func main() {
 	if cfg.jaegerAgent != "" {
 		jcfg := jconfig.Configuration{
 			Sampler: &jconfig.SamplerConfig{
-				Type:  "const",
-				Param: 1,
+				Type:  "ratelimiting",
+				Param: 10,
 			},
 			Reporter: &jconfig.ReporterConfig{
 				LogSpans:            false,
