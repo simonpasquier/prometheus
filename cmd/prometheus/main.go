@@ -675,7 +675,7 @@ func sendAlerts(n *notifier.Manager, externalURL string) rules.NotifyFunc {
 			res = append(res, a)
 		}
 
-		if len(alerts) > 0 {
+		if len(res) > 0 {
 			n.Send(res...)
 		}
 		return nil
