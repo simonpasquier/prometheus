@@ -68,6 +68,22 @@ import (
 
 var localhostRepresentations = []string{"127.0.0.1", "localhost"}
 
+// logStackTrace logs the stack trace in case the request panics.
+func logStackTrace(h http.Handler, l log.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				const size = 64 << 10
+				buf := make([]byte, size)
+				buf = buf[:runtime.Stack(buf, false)]
+				level.Error(l).Log("msg", "panic while serving request", "client", r.RemoteAddr, "url", r.URL, "err", err, "stack", buf)
+				panic(err)
+			}
+		}()
+		h.ServeHTTP(w, r)
+	})
+}
+
 // Handler serves various HTTP endpoints of the Prometheus server
 type Handler struct {
 	logger log.Logger
@@ -446,7 +462,7 @@ func (h *Handler) Run(ctx context.Context) error {
 	errlog := stdlog.New(log.NewStdlibAdapter(level.Error(h.logger)), "", 0)
 
 	httpSrv := &http.Server{
-		Handler:     nethttp.Middleware(opentracing.GlobalTracer(), mux, operationName),
+		Handler:     logStackTrace(nethttp.Middleware(opentracing.GlobalTracer(), mux, operationName), h.logger),
 		ErrorLog:    errlog,
 		ReadTimeout: h.options.ReadTimeout,
 	}
