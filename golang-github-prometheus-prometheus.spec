@@ -90,6 +90,9 @@ install -D -p -m 0644 consoles/* %{buildroot}%{_datadir}/prometheus/consoles
 %{_datadir}/prometheus/consoles
 
 %changelog
+* Thu Sep 27 2018 Simon Pasquier <spasquie@redhat.com> - 2.3.2-3
+- Remove stop command in systemd unit
+
 * Fri Jul 27 2018 Simon Pasquier <spasquie@redhat.com> - 2.3.2-2
 - Enable aarch64
 

@@ -7,7 +7,6 @@ Type=simple
 EnvironmentFile=-/etc/sysconfig/prometheus
 ExecStart=/usr/bin/prometheus $CONFIG_FILE $STORAGE_PATH $OTHER_ARGS
 ExecReload=/bin/kill -SIGHUP $MAINPID
-ExecStop=/bin/kill -SIGKILL $MAINPID
 
 [Install]
 WantedBy=multi-user.target
