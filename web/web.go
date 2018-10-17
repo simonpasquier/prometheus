@@ -172,12 +172,6 @@ type Options struct {
 	RemoteReadConcurrencyLimit int
 }
 
-func instrumentHandlerWithPrefix(prefix string) func(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
-	return func(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
-		return instrumentHandler(prefix+handlerName, handler)
-	}
-}
-
 func instrumentHandler(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
 	return traceHandler(handlerName,
 		promhttp.InstrumentHandlerDuration(
@@ -452,7 +446,7 @@ func (h *Handler) Run(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.Handle("/", h.router)
 
-	av1 := route.New().WithInstrumentation(instrumentHandlerWithPrefix("/api/v1"))
+	av1 := route.New().WithInstrumentation(instrumentHandler)
 	h.apiV1.Register(av1)
 	apiPath := "/api"
 	if h.options.RoutePrefix != "/" {
