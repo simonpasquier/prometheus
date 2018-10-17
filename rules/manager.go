@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"runtime/trace"
 	"sort"
 	"sync"
 	"time"
@@ -389,9 +390,12 @@ func (g *Group) Eval(ctx context.Context, ts time.Time) {
 		}
 
 		func(i int, rule Rule) {
+			ctx, task := trace.NewTask(ctx, "rule")
+			trace.Log(ctx, "name", rule.Name())
 			sp, ctx := opentracing.StartSpanFromContext(ctx, "rule")
 			sp.SetTag("name", rule.Name())
 			defer func(t time.Time) {
+				task.End()
 				sp.Finish()
 				evalDuration.Observe(time.Since(t).Seconds())
 				rule.SetEvaluationDuration(time.Since(t))

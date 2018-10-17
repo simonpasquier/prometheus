@@ -29,6 +29,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"runtime/trace"
 	"sort"
 	"strings"
 	"sync"
@@ -171,14 +172,31 @@ type Options struct {
 	RemoteReadConcurrencyLimit int
 }
 
+func instrumentHandlerWithPrefix(prefix string) func(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
+	return func(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
+		return instrumentHandler(prefix+handlerName, handler)
+	}
+}
+
 func instrumentHandler(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
-	return promhttp.InstrumentHandlerDuration(
-		requestDuration.MustCurryWith(prometheus.Labels{"handler": handlerName}),
-		promhttp.InstrumentHandlerResponseSize(
-			responseSize.MustCurryWith(prometheus.Labels{"handler": handlerName}),
-			handler,
+	return traceHandler(handlerName,
+		promhttp.InstrumentHandlerDuration(
+			requestDuration.MustCurryWith(prometheus.Labels{"handler": handlerName}),
+			promhttp.InstrumentHandlerResponseSize(
+				responseSize.MustCurryWith(prometheus.Labels{"handler": handlerName}),
+				handler,
+			),
 		),
 	)
+}
+
+func traceHandler(handlerName string, next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, task := trace.NewTask(r.Context(), handlerName)
+		defer task.End()
+		r = r.WithContext(ctx)
+		next.ServeHTTP(w, r)
+	}
 }
 
 // New initializes a new web Handler.
@@ -434,7 +452,7 @@ func (h *Handler) Run(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.Handle("/", h.router)
 
-	av1 := route.New().WithInstrumentation(instrumentHandler)
+	av1 := route.New().WithInstrumentation(instrumentHandlerWithPrefix("/api/v1"))
 	h.apiV1.Register(av1)
 	apiPath := "/api"
 	if h.options.RoutePrefix != "/" {

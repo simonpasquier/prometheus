@@ -148,9 +148,8 @@ func (q *query) Close() {
 
 // Exec implements the Query interface.
 func (q *query) Exec(ctx context.Context) *Result {
-	ctx, task := trace.NewTask(ctx, queryTag)
-	defer task.End()
-	trace.Log(ctx, "statement", q.stmt.String())
+	defer trace.StartRegion(ctx, queryTag).End()
+	trace.Log(ctx, queryTag, q.stmt.String())
 
 	if span := opentracing.SpanFromContext(ctx); span != nil {
 		span.SetTag(queryTag, q.stmt.String())
