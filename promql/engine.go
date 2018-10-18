@@ -20,7 +20,6 @@ import (
 	"math"
 	"regexp"
 	"runtime"
-	"runtime/trace"
 	"sort"
 	"strconv"
 	"sync"
@@ -28,7 +27,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/pkg/gate"
@@ -38,6 +36,7 @@ import (
 	"github.com/prometheus/prometheus/storage"
 
 	"github.com/prometheus/prometheus/util/stats"
+	"github.com/prometheus/prometheus/util/tracing"
 )
 
 const (
@@ -148,11 +147,8 @@ func (q *query) Close() {
 
 // Exec implements the Query interface.
 func (q *query) Exec(ctx context.Context) *Result {
-	defer trace.StartRegion(ctx, queryTag).End()
-	trace.Log(ctx, queryTag, q.stmt.String())
-
-	if span := opentracing.SpanFromContext(ctx); span != nil {
-		span.SetTag(queryTag, q.stmt.String())
+	if span := tracing.SpanFromContext(ctx); span != nil {
+		span.SetTag(ctx, queryTag, q.stmt.String())
 	}
 
 	res, err := q.ng.exec(ctx, q)

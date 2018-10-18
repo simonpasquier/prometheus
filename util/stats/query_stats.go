@@ -15,10 +15,10 @@ package stats
 
 import (
 	"context"
-	"runtime/trace"
 
-	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/prometheus/prometheus/util/tracing"
 )
 
 // QueryTiming identifies the code area or functionality in which time is spent
@@ -121,26 +121,22 @@ type SpanTimer struct {
 	timer     *Timer
 	observers []prometheus.Observer
 
-	region *trace.Region
-	span   opentracing.Span
+	span *tracing.Span
 }
 
 func NewSpanTimer(ctx context.Context, operation string, timer *Timer, observers ...prometheus.Observer) (*SpanTimer, context.Context) {
-	region := trace.StartRegion(ctx, operation)
-	span, ctx := opentracing.StartSpanFromContext(ctx, operation)
+	span, ctx := tracing.StartSpanFromContext(ctx, operation)
 	timer.Start()
 
 	return &SpanTimer{
 		timer:     timer,
 		observers: observers,
 
-		span:   span,
-		region: region,
+		span: span,
 	}, ctx
 }
 
 func (s *SpanTimer) Finish() {
-	s.region.End()
 	s.timer.Stop()
 	s.span.Finish()
 

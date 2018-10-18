@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"math"
 	"net/url"
-	"runtime/trace"
 	"sort"
 	"sync"
 	"time"
@@ -28,7 +27,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/prometheus/common/model"
@@ -38,6 +36,7 @@ import (
 	"github.com/prometheus/prometheus/pkg/value"
 	"github.com/prometheus/prometheus/promql"
 	"github.com/prometheus/prometheus/storage"
+	"github.com/prometheus/prometheus/util/tracing"
 )
 
 // RuleHealth describes the health state of a target.
@@ -390,12 +389,9 @@ func (g *Group) Eval(ctx context.Context, ts time.Time) {
 		}
 
 		func(i int, rule Rule) {
-			ctx, task := trace.NewTask(ctx, "rule")
-			trace.Log(ctx, "name", rule.Name())
-			sp, ctx := opentracing.StartSpanFromContext(ctx, "rule")
-			sp.SetTag("name", rule.Name())
+			sp, ctx := tracing.StartSpanFromContext(ctx, "rule")
+			sp.SetTag(ctx, "name", rule.Name())
 			defer func(t time.Time) {
-				task.End()
 				sp.Finish()
 				evalDuration.Observe(time.Since(t).Seconds())
 				rule.SetEvaluationDuration(time.Since(t))

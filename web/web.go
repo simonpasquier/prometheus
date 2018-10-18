@@ -29,7 +29,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"runtime/trace"
 	"sort"
 	"strings"
 	"sync"
@@ -63,6 +62,7 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/template"
 	"github.com/prometheus/prometheus/util/httputil"
+	"github.com/prometheus/prometheus/util/tracing"
 	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 	api_v2 "github.com/prometheus/prometheus/web/api/v2"
 	"github.com/prometheus/prometheus/web/ui"
@@ -186,8 +186,8 @@ func instrumentHandler(handlerName string, handler http.HandlerFunc) http.Handle
 
 func traceHandler(handlerName string, next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, task := trace.NewTask(r.Context(), handlerName)
-		defer task.End()
+		sp, ctx := tracing.NewSpan(r.Context(), handlerName)
+		defer sp.Finish()
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	}
