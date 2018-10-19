@@ -22,7 +22,7 @@ func newTask(ctx context.Context, _ string) (context.Context, runtimeTracer) {
 }
 
 func startRegion(_ context.Context, _ string) runtimeTracer {
-	return oopTracer{}
+	return noopTracer{}
 }
 
 func log(_ context.Context, _, _ string) {}
