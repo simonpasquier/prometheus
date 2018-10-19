@@ -186,7 +186,13 @@ func instrumentHandler(handlerName string, handler http.HandlerFunc) http.Handle
 
 func traceHandler(handlerName string, next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// The OpenTracing span has already been created by nethttp.Middleware.
+		// Here we are only creating the runtime trace and associate it with
+		// the existing OT span. This way tags and child spans are properly
+		// tracked by the runtime tracer too.
+		otSpan := opentracing.SpanFromContext(r.Context())
 		sp, ctx := tracing.NewSpan(r.Context(), fmt.Sprintf("%s %s", r.Method, handlerName))
+		sp.Attach(otSpan)
 		defer sp.Finish()
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)

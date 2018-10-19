@@ -41,9 +41,18 @@ type noopTracer struct{}
 
 func (t noopTracer) End() {}
 
-// NewSpan creates a new Span that isn't linked to an existing OpenTracing Span.
+// NewSpan creates a new Span not attached to an existing OpenTracing span.
 func NewSpan(ctx context.Context, name string) (*Span, context.Context) {
 	return newTaskSpan(ctx, name, nil)
+}
+
+// Attach associates an existing OpenTracing span.
+// The OpenTracing span won't be terminated when calling Finish().
+func (s *Span) Attach(otSpan opentracing.Span) {
+	if s.otSpan != nil {
+		panic("OpenTracing span already attached!")
+	}
+	s.otSpan = otSpan
 }
 
 func newTaskSpan(ctx context.Context, name string, otSpan opentracing.Span) (*Span, context.Context) {
@@ -67,9 +76,10 @@ func newRegionSpan(ctx context.Context, name string, otSpan opentracing.Span) (*
 	return sp, context.WithValue(ctx, activeSpanKey, sp)
 }
 
-// StartSpanFromContext creates a new OpenTracing span (linked to a parent OT
+// StartSpanFromContext creates a new OpenTracing span (linked to a parent OpenTracing
 // span if one is found in the current context) and starts a new task (for top-level
 // spans) or a new region.
+// The OpenTracing span as well as the task or region will be terminated when calling Finish().
 func StartSpanFromContext(ctx context.Context, operationName string) (*Span, context.Context) {
 	var sp *Span
 
