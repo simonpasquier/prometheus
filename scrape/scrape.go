@@ -29,6 +29,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	config_util "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/version"
@@ -100,6 +101,13 @@ var (
 			Help: "Total number of samples rejected due to timestamp falling outside of the time bounds",
 		},
 	)
+	targetScrapeHTTPDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "prometheus_target_scrapes_http_duration_seconds",
+			Help:    "Histogram of latencies for HTTP requests",
+			Buckets: []float64{.1, .5, 1, 2, 10},
+		}, []string{"code", "scrape_job"},
+	)
 )
 
 func init() {
@@ -111,6 +119,7 @@ func init() {
 	prometheus.MustRegister(targetScrapeSampleDuplicate)
 	prometheus.MustRegister(targetScrapeSampleOutOfOrder)
 	prometheus.MustRegister(targetScrapeSampleOutOfBounds)
+	prometheus.MustRegister(targetScrapeHTTPDuration)
 }
 
 // scrapePool manages scrapes for sets of targets.
@@ -146,6 +155,7 @@ func newScrapePool(cfg *config.ScrapeConfig, app Appendable, logger log.Logger) 
 		// Any errors that could occur here should be caught during config validation.
 		level.Error(logger).Log("msg", "Error creating HTTP client", "err", err)
 	}
+	client.Transport = promhttp.InstrumentRoundTripperDuration(targetScrapeHTTPDuration.MustCurryWith(prometheus.Labels{"scrape_job": cfg.JobName}), client.Transport)
 
 	buffers := pool.New(1e3, 100e6, 3, func(sz int) interface{} { return make([]byte, 0, sz) })
 
@@ -238,6 +248,7 @@ func (sp *scrapePool) reload(cfg *config.ScrapeConfig) {
 		// Any errors that could occur here should be caught during config validation.
 		level.Error(sp.logger).Log("msg", "Error creating HTTP client", "err", err)
 	}
+	client.Transport = promhttp.InstrumentRoundTripperDuration(targetScrapeHTTPDuration, client.Transport)
 	sp.config = cfg
 	sp.client = client
 
