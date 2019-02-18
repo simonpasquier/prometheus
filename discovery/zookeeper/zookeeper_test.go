@@ -23,9 +23,12 @@ import (
 func TestNewDiscoveryError(t *testing.T) {
 	_, err := NewDiscovery(
 		[]string{"unreachable.test"},
-		time.Second, []string{"/"},
+		time.Second,
+		[]string{"/"},
 		nil,
-		func(data []byte, path string) (model.LabelSet, error) { return nil, nil })
+		func(data []byte, path string) (model.LabelSet, error) { return nil, nil },
+		"test",
+	)
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}

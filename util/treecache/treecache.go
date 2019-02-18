@@ -15,6 +15,7 @@ package treecache
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -66,7 +67,7 @@ type ZookeeperTreeCache struct {
 	conn   *zk.Conn
 	prefix string
 	events chan ZookeeperTreeCacheEvent
-	stop   chan struct{}
+	ctx    context.Context
 	head   *zookeeperTreeCacheNode
 
 	logger log.Logger
@@ -81,43 +82,48 @@ type ZookeeperTreeCacheEvent struct {
 type zookeeperTreeCacheNode struct {
 	data     *[]byte
 	events   chan zk.Event
-	done     chan struct{}
-	stopped  bool
 	children map[string]*zookeeperTreeCacheNode
 }
 
 // NewZookeeperTreeCache creates a new ZookeeperTreeCache for a given path.
-func NewZookeeperTreeCache(conn *zk.Conn, path string, events chan ZookeeperTreeCacheEvent, logger log.Logger) *ZookeeperTreeCache {
+func NewZookeeperTreeCache(ctx context.Context, conn *zk.Conn, path string, events chan ZookeeperTreeCacheEvent, logger log.Logger) *ZookeeperTreeCache {
 	tc := &ZookeeperTreeCache{
 		conn:   conn,
 		prefix: path,
 		events: events,
-		stop:   make(chan struct{}),
+		ctx:    ctx,
 
 		logger: logger,
 	}
 	tc.head = &zookeeperTreeCacheNode{
 		events:   make(chan zk.Event),
 		children: map[string]*zookeeperTreeCacheNode{},
-		stopped:  true,
 	}
 	go tc.loop(path)
 	return tc
 }
 
-// Stop stops the tree cache.
-func (tc *ZookeeperTreeCache) Stop() {
-	tc.stop <- struct{}{}
-}
-
 func (tc *ZookeeperTreeCache) loop(path string) {
+	defer func() {
+		tc.conn.Close()
+	}()
 	failureMode := false
 	retryChan := make(chan struct{})
 
 	failure := func() {
 		failureCounter.Inc()
 		failureMode = true
+		select {
+		case <-tc.ctx.Done():
+			return
+		default:
+		}
 		time.AfterFunc(time.Second*10, func() {
+			select {
+			case <-tc.ctx.Done():
+				return
+			default:
+			}
 			retryChan <- struct{}{}
 		})
 	}
@@ -130,6 +136,11 @@ func (tc *ZookeeperTreeCache) loop(path string) {
 
 	for {
 		select {
+		case <-tc.ctx.Done():
+			return
+		default:
+		}
+		select {
 		case ev := <-tc.head.events:
 			level.Debug(tc.logger).Log("msg", "Received Zookeeper event", "event", ev)
 			if failureMode {
@@ -139,31 +150,30 @@ func (tc *ZookeeperTreeCache) loop(path string) {
 			if ev.Type == zk.EventNotWatching {
 				level.Info(tc.logger).Log("msg", "Lost connection to Zookeeper.")
 				failure()
-			} else {
-				path := strings.TrimPrefix(ev.Path, tc.prefix)
-				parts := strings.Split(path, "/")
-				node := tc.head
-				for _, part := range parts[1:] {
-					childNode := node.children[part]
-					if childNode == nil {
-						childNode = &zookeeperTreeCacheNode{
-							events:   tc.head.events,
-							children: map[string]*zookeeperTreeCacheNode{},
-							done:     make(chan struct{}, 1),
-						}
-						node.children[part] = childNode
+				continue
+			}
+			path := strings.TrimPrefix(ev.Path, tc.prefix)
+			parts := strings.Split(path, "/")
+			node := tc.head
+			for _, part := range parts[1:] {
+				childNode := node.children[part]
+				if childNode == nil {
+					childNode = &zookeeperTreeCacheNode{
+						events:   tc.head.events,
+						children: map[string]*zookeeperTreeCacheNode{},
 					}
-					node = childNode
+					node.children[part] = childNode
 				}
+				node = childNode
+			}
 
-				err := tc.recursiveNodeUpdate(ev.Path, node)
-				if err != nil {
-					level.Error(tc.logger).Log("msg", "Error during processing of Zookeeper event", "err", err)
-					failure()
-				} else if tc.head.data == nil {
-					level.Error(tc.logger).Log("msg", "Error during processing of Zookeeper event", "err", "path no longer exists", "path", tc.prefix)
-					failure()
-				}
+			err := tc.recursiveNodeUpdate(ev.Path, node)
+			if err != nil {
+				level.Error(tc.logger).Log("msg", "Error during processing of Zookeeper event", "err", err)
+				failure()
+			} else if tc.head.data == nil {
+				level.Error(tc.logger).Log("msg", "Error during processing of Zookeeper event", "err", "path no longer exists", "path", tc.prefix)
+				failure()
 			}
 		case <-retryChan:
 			level.Info(tc.logger).Log("msg", "Attempting to resync state with Zookeeper")
@@ -178,13 +188,12 @@ func (tc *ZookeeperTreeCache) loop(path string) {
 				// Revert to our previous state.
 				tc.head.children = previousState.children
 				failure()
-			} else {
-				tc.resyncState(tc.prefix, tc.head, previousState)
-				level.Info(tc.logger).Log("Zookeeper resync successful")
-				failureMode = false
+				continue
 			}
-		case <-tc.stop:
-			tc.recursiveStop(tc.head)
+			tc.resyncState(tc.prefix, tc.head, previousState)
+			level.Info(tc.logger).Log("Zookeeper resync successful")
+			failureMode = false
+		case <-tc.ctx.Done():
 			return
 		}
 	}
@@ -204,7 +213,11 @@ func (tc *ZookeeperTreeCache) recursiveNodeUpdate(path string, node *zookeeperTr
 
 	if node.data == nil || !bytes.Equal(*node.data, data) {
 		node.data = &data
-		tc.events <- ZookeeperTreeCacheEvent{Path: path, Data: node.data}
+		select {
+		case tc.events <- ZookeeperTreeCacheEvent{Path: path, Data: node.data}:
+		case <-tc.ctx.Done():
+			return tc.ctx.Err()
+		}
 	}
 
 	children, _, childWatcher, err := tc.conn.ChildrenW(path)
@@ -219,13 +232,11 @@ func (tc *ZookeeperTreeCache) recursiveNodeUpdate(path string, node *zookeeperTr
 	for _, child := range children {
 		currentChildren[child] = struct{}{}
 		childNode := node.children[child]
-		// Does not already exists or we previous had a watch that
-		// triggered.
-		if childNode == nil || childNode.stopped {
+		// The child node didn't already exist.
+		if childNode == nil {
 			node.children[child] = &zookeeperTreeCacheNode{
 				events:   node.events,
 				children: map[string]*zookeeperTreeCacheNode{},
-				done:     make(chan struct{}, 1),
 			}
 			err = tc.recursiveNodeUpdate(path+"/"+child, node.children[child])
 			if err != nil {
@@ -234,7 +245,7 @@ func (tc *ZookeeperTreeCache) recursiveNodeUpdate(path string, node *zookeeperTr
 		}
 	}
 
-	// Remove nodes that no longer exist
+	// Remove nodes that no longer exist.
 	for name, childNode := range node.children {
 		if _, ok := currentChildren[name]; !ok || node.data == nil {
 			tc.recursiveDelete(path+"/"+name, childNode)
@@ -250,7 +261,7 @@ func (tc *ZookeeperTreeCache) recursiveNodeUpdate(path string, node *zookeeperTr
 			node.events <- event
 		case event := <-childWatcher:
 			node.events <- event
-		case <-node.done:
+		case <-tc.ctx.Done():
 		}
 		numWatchers.Dec()
 	}()
@@ -268,25 +279,15 @@ func (tc *ZookeeperTreeCache) resyncState(path string, currentState, previousSta
 }
 
 func (tc *ZookeeperTreeCache) recursiveDelete(path string, node *zookeeperTreeCacheNode) {
-	if !node.stopped {
-		node.done <- struct{}{}
-		node.stopped = true
-	}
 	if node.data != nil {
-		tc.events <- ZookeeperTreeCacheEvent{Path: path, Data: nil}
+		select {
+		case tc.events <- ZookeeperTreeCacheEvent{Path: path, Data: nil}:
+		case <-tc.ctx.Done():
+			return
+		}
 		node.data = nil
 	}
 	for name, childNode := range node.children {
 		tc.recursiveDelete(path+"/"+name, childNode)
-	}
-}
-
-func (tc *ZookeeperTreeCache) recursiveStop(node *zookeeperTreeCacheNode) {
-	if !node.stopped {
-		node.done <- struct{}{}
-		node.stopped = true
-	}
-	for _, childNode := range node.children {
-		tc.recursiveStop(childNode)
 	}
 }

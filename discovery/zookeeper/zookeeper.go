@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/mwitkow/go-conntrack"
 	"github.com/prometheus/common/model"
 	"github.com/samuel/go-zookeeper/zk"
 
@@ -103,7 +104,8 @@ func (c *NerveSDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // Discovery implements the Discoverer interface for discovering
 // targets from Zookeeper.
 type Discovery struct {
-	conn *zk.Conn
+	conn   *zk.Conn
+	cancel context.CancelFunc
 
 	sources map[string]*targetgroup.Group
 
@@ -116,12 +118,12 @@ type Discovery struct {
 
 // NewNerveDiscovery returns a new Discovery for the given Nerve config.
 func NewNerveDiscovery(conf *NerveSDConfig, logger log.Logger) (*Discovery, error) {
-	return NewDiscovery(conf.Servers, time.Duration(conf.Timeout), conf.Paths, logger, parseNerveMember)
+	return NewDiscovery(conf.Servers, time.Duration(conf.Timeout), conf.Paths, logger, parseNerveMember, "nerve_sd")
 }
 
 // NewServersetDiscovery returns a new Discovery for the given serverset config.
 func NewServersetDiscovery(conf *ServersetSDConfig, logger log.Logger) (*Discovery, error) {
-	return NewDiscovery(conf.Servers, time.Duration(conf.Timeout), conf.Paths, logger, parseServersetMember)
+	return NewDiscovery(conf.Servers, time.Duration(conf.Timeout), conf.Paths, logger, parseServersetMember, "serverset_sd")
 }
 
 // NewDiscovery returns a new discovery along Zookeeper parses with
@@ -132,13 +134,27 @@ func NewDiscovery(
 	paths []string,
 	logger log.Logger,
 	pf func(data []byte, path string) (model.LabelSet, error),
+	name string,
 ) (*Discovery, error) {
 	if logger == nil {
 		logger = log.NewNopLogger()
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	conn, _, err := zk.Connect(
-		srvs, timeout,
+		srvs,
+		timeout,
+		zk.WithDialer(
+			func(network string, address string, timeout time.Duration) (net.Conn, error) {
+				dialer := conntrack.NewDialContextFunc(
+					conntrack.DialWithTracing(),
+					conntrack.DialWithName(name),
+				)
+				ctx, cancel := context.WithTimeout(ctx, timeout)
+				defer cancel()
+				return dialer(ctx, network, address)
+			},
+		),
 		func(c *zk.Conn) {
 			c.SetLogger(treecache.NewZookeeperLogger(logger))
 		})
@@ -147,6 +163,7 @@ func NewDiscovery(
 	}
 	updates := make(chan treecache.ZookeeperTreeCacheEvent)
 	sd := &Discovery{
+		cancel:  cancel,
 		conn:    conn,
 		updates: updates,
 		sources: map[string]*targetgroup.Group{},
@@ -154,7 +171,7 @@ func NewDiscovery(
 		logger:  logger,
 	}
 	for _, path := range paths {
-		sd.treeCaches = append(sd.treeCaches, treecache.NewZookeeperTreeCache(conn, path, updates, logger))
+		sd.treeCaches = append(sd.treeCaches, treecache.NewZookeeperTreeCache(ctx, conn, path, updates, logger))
 	}
 	return sd, nil
 }
@@ -162,13 +179,7 @@ func NewDiscovery(
 // Run implements the Discoverer interface.
 func (d *Discovery) Run(ctx context.Context, ch chan<- []*targetgroup.Group) {
 	defer func() {
-		for _, tc := range d.treeCaches {
-			tc.Stop()
-		}
-		// Drain event channel in case the treecache leaks goroutines otherwise.
-		for range d.updates {
-		}
-		d.conn.Close()
+		d.cancel()
 	}()
 
 	for {
