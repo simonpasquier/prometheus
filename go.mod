@@ -31,7 +31,7 @@ require (
 	github.com/go-kit/kit v0.8.0
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-sql-driver/mysql v1.4.0 // indirect
-	github.com/gogo/protobuf v1.2.0
+	github.com/gogo/protobuf v1.2.1
 	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4 // indirect
 	github.com/golang/snappy v0.0.0-20160529050041-d9eb7a3d35ec
 	github.com/google/btree v0.0.0-20180124185431-e89373fe6b4a // indirect
