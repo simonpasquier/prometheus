@@ -166,7 +166,7 @@ github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger/genswagger
 github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway/httprule
 github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway/generator
 github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger/options
-# github.com/hashicorp/consul v1.4.2
+# github.com/hashicorp/consul v1.4.3
 github.com/hashicorp/consul/api
 # github.com/hashicorp/go-cleanhttp v0.5.0
 github.com/hashicorp/go-cleanhttp
