@@ -3,7 +3,7 @@ module github.com/prometheus/prometheus
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.4.1 // indirect
 	github.com/Azure/azure-sdk-for-go v23.2.0+incompatible
-	github.com/Azure/go-autorest v11.2.8+incompatible
+	github.com/Azure/go-autorest v11.5.2+incompatible
 	github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f // indirect
 	github.com/VividCortex/ewma v1.1.1 // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
