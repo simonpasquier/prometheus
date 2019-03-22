@@ -81,7 +81,7 @@ require (
 	github.com/pkg/errors v0.8.0
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
-	github.com/prometheus/common v0.0.0-20181119215939-b36ad289a3ea
+	github.com/prometheus/common v0.0.0-20181126121408-4724e9255275
 	github.com/prometheus/tsdb v0.6.1
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a // indirect
 	github.com/rlmcpherson/s3gof3r v0.5.0 // indirect
