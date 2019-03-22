@@ -40,7 +40,7 @@ require (
 	github.com/gophercloud/gophercloud v0.0.0-20190301152420-fca40860790e
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.6.3
+	github.com/grpc-ecosystem/grpc-gateway v1.8.5
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
 	github.com/hashicorp/consul v1.4.2
 	github.com/hashicorp/go-cleanhttp v0.5.0 // indirect
