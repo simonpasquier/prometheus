@@ -74,7 +74,7 @@ require (
 	github.com/onsi/gomega v1.4.1 // indirect
 	github.com/opentracing-contrib/go-stdlib v0.0.0-20170113013457-1de4cc2120e7
 	github.com/opentracing/basictracer-go v1.0.0 // indirect
-	github.com/opentracing/opentracing-go v1.0.1
+	github.com/opentracing/opentracing-go v1.0.2
 	github.com/peterbourgon/diskv v0.0.0-20180312054125-0646ccaebea1 // indirect
 	github.com/peterbourgon/g2s v0.0.0-20170223122336-d4e7ad98afea // indirect
 	github.com/petermattis/goid v0.0.0-20170504144140-0ded85884ba5 // indirect
