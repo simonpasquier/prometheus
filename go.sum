@@ -5,8 +5,6 @@ contrib.go.opencensus.io/exporter/ocagent v0.4.1/go.mod h1:b6YwD5Q3Yvj4yk0CDK5vG
 git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
 github.com/Azure/azure-sdk-for-go v23.2.0+incompatible h1:bch1RS060vGpHpY3zvQDV4rOiRw25J1zmR/B9a76aSA=
 github.com/Azure/azure-sdk-for-go v23.2.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
-github.com/Azure/go-autorest v11.2.8+incompatible h1:Q2feRPMlcfVcqz3pF87PJzkm5lZrL+x6BDtzhODzNJM=
-github.com/Azure/go-autorest v11.2.8+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
 github.com/Azure/go-autorest v11.5.2+incompatible h1:NTIEargbhAGNWuT7QEXJ2fqLMFvatupHIscb9FYwVOg=
 github.com/Azure/go-autorest v11.5.2+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
