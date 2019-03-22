@@ -99,7 +99,7 @@ require (
 	golang.org/x/net v0.0.0-20181201002055-351d144fa1fc
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	golang.org/x/time v0.0.0-20170424234030-8be79e1e0910
-	golang.org/x/tools v0.0.0-20181023010539-40a48ad93fbe
+	golang.org/x/tools v0.0.0-20190114222345-bf090417da8b
 	google.golang.org/api v0.0.0-20180910000450-7ca32eb868bf
 	google.golang.org/genproto v0.0.0-20180831171423-11092d34479b
 	google.golang.org/grpc v1.19.1

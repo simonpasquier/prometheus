@@ -325,12 +325,18 @@ golang.org/x/text/unicode/norm
 golang.org/x/text/transform
 # golang.org/x/time v0.0.0-20170424234030-8be79e1e0910
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20181023010539-40a48ad93fbe
+# golang.org/x/tools v0.0.0-20190114222345-bf090417da8b
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/imports
 golang.org/x/tools/go/ast/astutil
+golang.org/x/tools/go/packages
 golang.org/x/tools/internal/gopathwalk
+golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/internal/cgo
+golang.org/x/tools/go/internal/packagesdriver
+golang.org/x/tools/internal/semver
 golang.org/x/tools/internal/fastwalk
+golang.org/x/tools/go/internal/gcimporter
 # google.golang.org/api v0.0.0-20180910000450-7ca32eb868bf
 google.golang.org/api/compute/v1
 google.golang.org/api/gensupport
@@ -352,7 +358,7 @@ google.golang.org/appengine/internal/remote_api
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/protobuf/field_mask
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.17.0
+# google.golang.org/grpc v1.19.1
 google.golang.org/grpc
 google.golang.org/grpc/codes
 google.golang.org/grpc/grpclog
