@@ -102,7 +102,7 @@ require (
 	golang.org/x/tools v0.0.0-20190114222345-bf090417da8b
 	google.golang.org/api v0.0.0-20180910000450-7ca32eb868bf
 	google.golang.org/genproto v0.0.0-20180831171423-11092d34479b
-	google.golang.org/grpc v1.19.1
+	google.golang.org/grpc v1.20.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/fsnotify/fsnotify.v1 v1.3.0
