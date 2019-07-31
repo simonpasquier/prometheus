@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/common/model"
-	"github.com/simonpasquier/prometheus/util/testutil"
+	"github.com/simonpasquier/prometheus/sdk/testutil"
 )
 
 type OpenstackSDHypervisorTestSuite struct {

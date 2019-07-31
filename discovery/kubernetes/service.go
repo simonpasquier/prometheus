@@ -26,8 +26,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
-	"github.com/simonpasquier/prometheus/util/strutil"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/strutil"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
 
 // Service implements discovery of Kubernetes services.
@@ -106,7 +107,7 @@ func (s *Service) process(ctx context.Context, ch chan<- []*targetgroup.Group) b
 		return true
 	}
 	if !exists {
-		send(ctx, s.logger, RoleService, ch, &targetgroup.Group{Source: serviceSourceFromNamespaceAndName(namespace, name)})
+		send(ctx, s.logger, sdconfig.RoleService, ch, &targetgroup.Group{Source: serviceSourceFromNamespaceAndName(namespace, name)})
 		return true
 	}
 	eps, err := convertToService(o)
@@ -114,7 +115,7 @@ func (s *Service) process(ctx context.Context, ch chan<- []*targetgroup.Group) b
 		level.Error(s.logger).Log("msg", "converting to Service object failed", "err", err)
 		return true
 	}
-	send(ctx, s.logger, RoleService, ch, s.buildService(eps))
+	send(ctx, s.logger, sdconfig.RoleService, ch, s.buildService(eps))
 	return true
 }
 

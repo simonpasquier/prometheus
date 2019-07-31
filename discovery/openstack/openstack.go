@@ -24,88 +24,18 @@ import (
 	conntrack "github.com/mwitkow/go-conntrack"
 	"github.com/pkg/errors"
 	config_util "github.com/prometheus/common/config"
-	"github.com/prometheus/common/model"
 
 	"github.com/simonpasquier/prometheus/discovery/refresh"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
-
-// DefaultSDConfig is the default OpenStack SD configuration.
-var DefaultSDConfig = SDConfig{
-	Port:            80,
-	RefreshInterval: model.Duration(60 * time.Second),
-}
-
-// SDConfig is the configuration for OpenStack based service discovery.
-type SDConfig struct {
-	IdentityEndpoint            string                `yaml:"identity_endpoint"`
-	Username                    string                `yaml:"username"`
-	UserID                      string                `yaml:"userid"`
-	Password                    config_util.Secret    `yaml:"password"`
-	ProjectName                 string                `yaml:"project_name"`
-	ProjectID                   string                `yaml:"project_id"`
-	DomainName                  string                `yaml:"domain_name"`
-	DomainID                    string                `yaml:"domain_id"`
-	ApplicationCredentialName   string                `yaml:"application_credential_name"`
-	ApplicationCredentialID     string                `yaml:"application_credential_id"`
-	ApplicationCredentialSecret config_util.Secret    `yaml:"application_credential_secret"`
-	Role                        Role                  `yaml:"role"`
-	Region                      string                `yaml:"region"`
-	RefreshInterval             model.Duration        `yaml:"refresh_interval,omitempty"`
-	Port                        int                   `yaml:"port"`
-	AllTenants                  bool                  `yaml:"all_tenants,omitempty"`
-	TLSConfig                   config_util.TLSConfig `yaml:"tls_config,omitempty"`
-}
-
-// Role is the role of the target in OpenStack.
-type Role string
-
-// The valid options for OpenStackRole.
-const (
-	// OpenStack document reference
-	// https://docs.openstack.org/nova/pike/admin/arch.html#hypervisors
-	OpenStackRoleHypervisor Role = "hypervisor"
-	// OpenStack document reference
-	// https://docs.openstack.org/horizon/pike/user/launch-instances.html
-	OpenStackRoleInstance Role = "instance"
-)
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *Role) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal((*string)(c)); err != nil {
-		return err
-	}
-	switch *c {
-	case OpenStackRoleHypervisor, OpenStackRoleInstance:
-		return nil
-	default:
-		return errors.Errorf("unknown OpenStack SD role %q", *c)
-	}
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *SDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = DefaultSDConfig
-	type plain SDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-	if c.Role == "" {
-		return errors.New("role missing (one of: instance, hypervisor)")
-	}
-	if c.Region == "" {
-		return errors.New("openstack SD configuration requires a region")
-	}
-	return nil
-}
 
 type refresher interface {
 	refresh(context.Context) ([]*targetgroup.Group, error)
 }
 
 // NewDiscovery returns a new OpenStack Discoverer which periodically refreshes its targets.
-func NewDiscovery(conf *SDConfig, l log.Logger) (*refresh.Discovery, error) {
+func NewDiscovery(conf *sdconfig.OpenStack, l log.Logger) (*refresh.Discovery, error) {
 	r, err := newRefresher(conf, l)
 	if err != nil {
 		return nil, err
@@ -119,7 +49,7 @@ func NewDiscovery(conf *SDConfig, l log.Logger) (*refresh.Discovery, error) {
 
 }
 
-func newRefresher(conf *SDConfig, l log.Logger) (refresher, error) {
+func newRefresher(conf *sdconfig.OpenStack, l log.Logger) (refresher, error) {
 	var opts gophercloud.AuthOptions
 	if conf.IdentityEndpoint == "" {
 		var err error
@@ -162,9 +92,9 @@ func newRefresher(conf *SDConfig, l log.Logger) (refresher, error) {
 		Timeout: 5 * time.Duration(conf.RefreshInterval),
 	}
 	switch conf.Role {
-	case OpenStackRoleHypervisor:
+	case sdconfig.OpenStackRoleHypervisor:
 		return newHypervisorDiscovery(client, &opts, conf.Port, conf.Region, l), nil
-	case OpenStackRoleInstance:
+	case sdconfig.OpenStackRoleInstance:
 		return newInstanceDiscovery(client, &opts, conf.Port, conf.Region, conf.AllTenants, l), nil
 	}
 	return nil, errors.New("unknown OpenStack discovery role")

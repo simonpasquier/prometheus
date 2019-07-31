@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -33,42 +32,9 @@ import (
 	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
-
-var (
-	patFileSDName = regexp.MustCompile(`^[^*]*(\*[^/]*)?\.(json|yml|yaml|JSON|YML|YAML)$`)
-
-	// DefaultSDConfig is the default file SD configuration.
-	DefaultSDConfig = SDConfig{
-		RefreshInterval: model.Duration(5 * time.Minute),
-	}
-)
-
-// SDConfig is the configuration for file based discovery.
-type SDConfig struct {
-	Files           []string       `yaml:"files"`
-	RefreshInterval model.Duration `yaml:"refresh_interval,omitempty"`
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *SDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = DefaultSDConfig
-	type plain SDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-	if len(c.Files) == 0 {
-		return errors.New("file service discovery config must contain at least one path name")
-	}
-	for _, name := range c.Files {
-		if !patFileSDName.MatchString(name) {
-			return errors.Errorf("path name %q is not valid for file discovery", name)
-		}
-	}
-	return nil
-}
 
 const fileSDFilepathLabel = model.MetaLabelPrefix + "filepath"
 
@@ -171,7 +137,7 @@ type Discovery struct {
 }
 
 // NewDiscovery returns a new file discovery for the given paths.
-func NewDiscovery(conf *SDConfig, logger log.Logger) *Discovery {
+func NewDiscovery(conf *sdconfig.File, logger log.Logger) *Discovery {
 	if logger == nil {
 		logger = log.NewNopLogger()
 	}

@@ -29,7 +29,8 @@ import (
 	"github.com/prometheus/common/model"
 
 	"github.com/simonpasquier/prometheus/discovery/refresh"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
 
 const (
@@ -54,44 +55,7 @@ var (
 			Name:      "sd_dns_lookup_failures_total",
 			Help:      "The number of DNS-SD lookup failures.",
 		})
-
-	// DefaultSDConfig is the default DNS SD configuration.
-	DefaultSDConfig = SDConfig{
-		RefreshInterval: model.Duration(30 * time.Second),
-		Type:            "SRV",
-	}
 )
-
-// SDConfig is the configuration for DNS based service discovery.
-type SDConfig struct {
-	Names           []string       `yaml:"names"`
-	RefreshInterval model.Duration `yaml:"refresh_interval,omitempty"`
-	Type            string         `yaml:"type"`
-	Port            int            `yaml:"port"` // Ignored for SRV records
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *SDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = DefaultSDConfig
-	type plain SDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-	if len(c.Names) == 0 {
-		return errors.New("DNS-SD config must contain at least one SRV record name")
-	}
-	switch strings.ToUpper(c.Type) {
-	case "SRV":
-	case "A", "AAAA":
-		if c.Port == 0 {
-			return errors.New("a port is required in DNS-SD configs for all record types except SRV")
-		}
-	default:
-		return errors.Errorf("invalid DNS-SD records type %s", c.Type)
-	}
-	return nil
-}
 
 func init() {
 	prometheus.MustRegister(dnsSDLookupFailuresCount)
@@ -111,7 +75,7 @@ type Discovery struct {
 }
 
 // NewDiscovery returns a new Discovery which periodically refreshes its targets.
-func NewDiscovery(conf SDConfig, logger log.Logger) *Discovery {
+func NewDiscovery(conf sdconfig.DNS, logger log.Logger) *Discovery {
 	if logger == nil {
 		logger = log.NewNopLogger()
 	}

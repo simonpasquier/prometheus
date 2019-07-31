@@ -31,7 +31,8 @@ import (
 	"github.com/prometheus/common/model"
 
 	"github.com/simonpasquier/prometheus/discovery/refresh"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
 
 const (
@@ -43,48 +44,6 @@ const (
 	tritonLabelMachineImage = tritonLabel + "machine_image"
 	tritonLabelServerID     = tritonLabel + "server_id"
 )
-
-// DefaultSDConfig is the default Triton SD configuration.
-var DefaultSDConfig = SDConfig{
-	Port:            9163,
-	RefreshInterval: model.Duration(60 * time.Second),
-	Version:         1,
-}
-
-// SDConfig is the configuration for Triton based service discovery.
-type SDConfig struct {
-	Account         string                `yaml:"account"`
-	DNSSuffix       string                `yaml:"dns_suffix"`
-	Endpoint        string                `yaml:"endpoint"`
-	Groups          []string              `yaml:"groups,omitempty"`
-	Port            int                   `yaml:"port"`
-	RefreshInterval model.Duration        `yaml:"refresh_interval,omitempty"`
-	TLSConfig       config_util.TLSConfig `yaml:"tls_config,omitempty"`
-	Version         int                   `yaml:"version"`
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *SDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = DefaultSDConfig
-	type plain SDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-	if c.Account == "" {
-		return errors.New("triton SD configuration requires an account")
-	}
-	if c.DNSSuffix == "" {
-		return errors.New("triton SD configuration requires a dns_suffix")
-	}
-	if c.Endpoint == "" {
-		return errors.New("triton SD configuration requires an endpoint")
-	}
-	if c.RefreshInterval <= 0 {
-		return errors.New("triton SD configuration requires RefreshInterval to be a positive integer")
-	}
-	return nil
-}
 
 // DiscoveryResponse models a JSON response from the Triton discovery.
 type discoveryResponse struct {
@@ -104,11 +63,11 @@ type Discovery struct {
 	*refresh.Discovery
 	client   *http.Client
 	interval time.Duration
-	sdConfig *SDConfig
+	sdConfig *sdconfig.Triton
 }
 
 // New returns a new Discovery which periodically refreshes its targets.
-func New(logger log.Logger, conf *SDConfig) (*Discovery, error) {
+func New(logger log.Logger, conf *sdconfig.Triton) (*Discovery, error) {
 	tls, err := config_util.NewTLSConfig(&conf.TLSConfig)
 	if err != nil {
 		return nil, err

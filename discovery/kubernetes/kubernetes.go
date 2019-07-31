@@ -15,13 +15,11 @@ package kubernetes
 
 import (
 	"context"
-	"reflect"
 	"sync"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	config_util "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
@@ -34,7 +32,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
 
 const (
@@ -56,76 +55,7 @@ var (
 		},
 		[]string{"role", "event"},
 	)
-	// DefaultSDConfig is the default Kubernetes SD configuration
-	DefaultSDConfig = SDConfig{}
 )
-
-// Role is role of the service in Kubernetes.
-type Role string
-
-// The valid options for Role.
-const (
-	RoleNode     Role = "node"
-	RolePod      Role = "pod"
-	RoleService  Role = "service"
-	RoleEndpoint Role = "endpoints"
-	RoleIngress  Role = "ingress"
-)
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *Role) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal((*string)(c)); err != nil {
-		return err
-	}
-	switch *c {
-	case RoleNode, RolePod, RoleService, RoleEndpoint, RoleIngress:
-		return nil
-	default:
-		return errors.Errorf("unknown Kubernetes SD role %q", *c)
-	}
-}
-
-// SDConfig is the configuration for Kubernetes service discovery.
-type SDConfig struct {
-	APIServer          config_util.URL              `yaml:"api_server,omitempty"`
-	Role               Role                         `yaml:"role"`
-	HTTPClientConfig   config_util.HTTPClientConfig `yaml:",inline"`
-	NamespaceDiscovery NamespaceDiscovery           `yaml:"namespaces,omitempty"`
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *SDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = SDConfig{}
-	type plain SDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-	if c.Role == "" {
-		return errors.Errorf("role missing (one of: pod, service, endpoints, node, ingress)")
-	}
-	err = c.HTTPClientConfig.Validate()
-	if err != nil {
-		return err
-	}
-	if c.APIServer.URL == nil && !reflect.DeepEqual(c.HTTPClientConfig, config_util.HTTPClientConfig{}) {
-		return errors.Errorf("to use custom HTTP client configuration please provide the 'api_server' URL explicitly")
-	}
-	return nil
-}
-
-// NamespaceDiscovery is the configuration for discovering
-// Kubernetes namespaces.
-type NamespaceDiscovery struct {
-	Names []string `yaml:"names"`
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *NamespaceDiscovery) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = NamespaceDiscovery{}
-	type plain NamespaceDiscovery
-	return unmarshal((*plain)(c))
-}
 
 func init() {
 	prometheus.MustRegister(eventCount)
@@ -159,9 +89,9 @@ type discoverer interface {
 type Discovery struct {
 	sync.RWMutex
 	client             kubernetes.Interface
-	role               Role
+	role               sdconfig.KubernetesRole
 	logger             log.Logger
-	namespaceDiscovery *NamespaceDiscovery
+	namespaceDiscovery *sdconfig.NamespaceDiscovery
 	discoverers        []discoverer
 }
 
@@ -174,7 +104,7 @@ func (d *Discovery) getNamespaces() []string {
 }
 
 // New creates a new Kubernetes discovery for the given role.
-func New(l log.Logger, conf *SDConfig) (*Discovery, error) {
+func New(l log.Logger, conf *sdconfig.Kubernetes) (*Discovery, error) {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -224,7 +154,7 @@ func (d *Discovery) Run(ctx context.Context, ch chan<- []*targetgroup.Group) {
 	namespaces := d.getNamespaces()
 
 	switch d.role {
-	case RoleEndpoint:
+	case sdconfig.RoleEndpoint:
 		for _, namespace := range namespaces {
 			e := d.client.CoreV1().Endpoints(namespace)
 			elw := &cache.ListWatch{
@@ -264,7 +194,7 @@ func (d *Discovery) Run(ctx context.Context, ch chan<- []*targetgroup.Group) {
 			go eps.serviceInf.Run(ctx.Done())
 			go eps.podInf.Run(ctx.Done())
 		}
-	case RolePod:
+	case sdconfig.RolePod:
 		for _, namespace := range namespaces {
 			p := d.client.CoreV1().Pods(namespace)
 			plw := &cache.ListWatch{
@@ -282,7 +212,7 @@ func (d *Discovery) Run(ctx context.Context, ch chan<- []*targetgroup.Group) {
 			d.discoverers = append(d.discoverers, pod)
 			go pod.informer.Run(ctx.Done())
 		}
-	case RoleService:
+	case sdconfig.RoleService:
 		for _, namespace := range namespaces {
 			s := d.client.CoreV1().Services(namespace)
 			slw := &cache.ListWatch{
@@ -300,7 +230,7 @@ func (d *Discovery) Run(ctx context.Context, ch chan<- []*targetgroup.Group) {
 			d.discoverers = append(d.discoverers, svc)
 			go svc.informer.Run(ctx.Done())
 		}
-	case RoleIngress:
+	case sdconfig.RoleIngress:
 		for _, namespace := range namespaces {
 			i := d.client.ExtensionsV1beta1().Ingresses(namespace)
 			ilw := &cache.ListWatch{
@@ -318,7 +248,7 @@ func (d *Discovery) Run(ctx context.Context, ch chan<- []*targetgroup.Group) {
 			d.discoverers = append(d.discoverers, ingress)
 			go ingress.informer.Run(ctx.Done())
 		}
-	case RoleNode:
+	case sdconfig.RoleNode:
 		nlw := &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				return d.client.CoreV1().Nodes().List(options)
@@ -356,7 +286,7 @@ func lv(s string) model.LabelValue {
 	return model.LabelValue(s)
 }
 
-func send(ctx context.Context, l log.Logger, role Role, ch chan<- []*targetgroup.Group, tg *targetgroup.Group) {
+func send(ctx context.Context, l log.Logger, role sdconfig.KubernetesRole, ch chan<- []*targetgroup.Group, tg *targetgroup.Group) {
 	if tg == nil {
 		return
 	}

@@ -27,7 +27,7 @@ import (
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 
-	"github.com/simonpasquier/prometheus/util/testutil"
+	"github.com/simonpasquier/prometheus/sdk/testutil"
 )
 
 var (

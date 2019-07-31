@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -27,79 +26,11 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/samuel/go-zookeeper/zk"
 
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
-	"github.com/simonpasquier/prometheus/util/strutil"
-	"github.com/simonpasquier/prometheus/util/treecache"
+	"github.com/simonpasquier/prometheus/discovery/treecache"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/strutil"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
-
-var (
-	// DefaultServersetSDConfig is the default Serverset SD configuration.
-	DefaultServersetSDConfig = ServersetSDConfig{
-		Timeout: model.Duration(10 * time.Second),
-	}
-	// DefaultNerveSDConfig is the default Nerve SD configuration.
-	DefaultNerveSDConfig = NerveSDConfig{
-		Timeout: model.Duration(10 * time.Second),
-	}
-)
-
-// ServersetSDConfig is the configuration for Twitter serversets in Zookeeper based discovery.
-type ServersetSDConfig struct {
-	Servers []string       `yaml:"servers"`
-	Paths   []string       `yaml:"paths"`
-	Timeout model.Duration `yaml:"timeout,omitempty"`
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *ServersetSDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = DefaultServersetSDConfig
-	type plain ServersetSDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-	if len(c.Servers) == 0 {
-		return errors.New("serverset SD config must contain at least one Zookeeper server")
-	}
-	if len(c.Paths) == 0 {
-		return errors.New("serverset SD config must contain at least one path")
-	}
-	for _, path := range c.Paths {
-		if !strings.HasPrefix(path, "/") {
-			return errors.Errorf("serverset SD config paths must begin with '/': %s", path)
-		}
-	}
-	return nil
-}
-
-// NerveSDConfig is the configuration for AirBnB's Nerve in Zookeeper based discovery.
-type NerveSDConfig struct {
-	Servers []string       `yaml:"servers"`
-	Paths   []string       `yaml:"paths"`
-	Timeout model.Duration `yaml:"timeout,omitempty"`
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *NerveSDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = DefaultNerveSDConfig
-	type plain NerveSDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-	if len(c.Servers) == 0 {
-		return errors.New("nerve SD config must contain at least one Zookeeper server")
-	}
-	if len(c.Paths) == 0 {
-		return errors.New("nerve SD config must contain at least one path")
-	}
-	for _, path := range c.Paths {
-		if !strings.HasPrefix(path, "/") {
-			return errors.Errorf("nerve SD config paths must begin with '/': %s", path)
-		}
-	}
-	return nil
-}
 
 // Discovery implements the Discoverer interface for discovering
 // targets from Zookeeper.
@@ -117,12 +48,12 @@ type Discovery struct {
 }
 
 // NewNerveDiscovery returns a new Discovery for the given Nerve config.
-func NewNerveDiscovery(conf *NerveSDConfig, logger log.Logger) (*Discovery, error) {
+func NewNerveDiscovery(conf *sdconfig.Nerve, logger log.Logger) (*Discovery, error) {
 	return NewDiscovery(conf.Servers, time.Duration(conf.Timeout), conf.Paths, logger, parseNerveMember)
 }
 
 // NewServersetDiscovery returns a new Discovery for the given serverset config.
-func NewServersetDiscovery(conf *ServersetSDConfig, logger log.Logger) (*Discovery, error) {
+func NewServersetDiscovery(conf *sdconfig.Serverset, logger log.Logger) (*Discovery, error) {
 	return NewDiscovery(conf.Servers, time.Duration(conf.Timeout), conf.Paths, logger, parseServersetMember)
 }
 

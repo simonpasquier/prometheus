@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/common/model"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

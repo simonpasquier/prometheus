@@ -28,8 +28,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
-	"github.com/simonpasquier/prometheus/util/strutil"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/strutil"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
 
 // Pod discovers new pod targets.
@@ -113,7 +114,7 @@ func (p *Pod) process(ctx context.Context, ch chan<- []*targetgroup.Group) bool 
 		return true
 	}
 	if !exists {
-		send(ctx, p.logger, RolePod, ch, &targetgroup.Group{Source: podSourceFromNamespaceAndName(namespace, name)})
+		send(ctx, p.logger, sdconfig.RolePod, ch, &targetgroup.Group{Source: podSourceFromNamespaceAndName(namespace, name)})
 		return true
 	}
 	eps, err := convertToPod(o)
@@ -121,7 +122,7 @@ func (p *Pod) process(ctx context.Context, ch chan<- []*targetgroup.Group) bool 
 		level.Error(p.logger).Log("msg", "converting to Pod object failed", "err", err)
 		return true
 	}
-	send(ctx, p.logger, RolePod, ch, p.buildPod(eps))
+	send(ctx, p.logger, sdconfig.RolePod, ch, p.buildPod(eps))
 	return true
 }
 

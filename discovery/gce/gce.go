@@ -29,8 +29,9 @@ import (
 	"google.golang.org/api/option"
 
 	"github.com/simonpasquier/prometheus/discovery/refresh"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
-	"github.com/simonpasquier/prometheus/util/strutil"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/strutil"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
 
 const (
@@ -50,49 +51,6 @@ const (
 	gceLabelMachineType    = gceLabel + "machine_type"
 )
 
-// DefaultSDConfig is the default GCE SD configuration.
-var DefaultSDConfig = SDConfig{
-	Port:            80,
-	TagSeparator:    ",",
-	RefreshInterval: model.Duration(60 * time.Second),
-}
-
-// SDConfig is the configuration for GCE based service discovery.
-type SDConfig struct {
-	// Project: The Google Cloud Project ID
-	Project string `yaml:"project"`
-
-	// Zone: The zone of the scrape targets.
-	// If you need to configure multiple zones use multiple gce_sd_configs
-	Zone string `yaml:"zone"`
-
-	// Filter: Can be used optionally to filter the instance list by other criteria.
-	// Syntax of this filter string is described here in the filter query parameter section:
-	// https://cloud.google.com/compute/docs/reference/latest/instances/list
-	Filter string `yaml:"filter,omitempty"`
-
-	RefreshInterval model.Duration `yaml:"refresh_interval,omitempty"`
-	Port            int            `yaml:"port"`
-	TagSeparator    string         `yaml:"tag_separator,omitempty"`
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *SDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = DefaultSDConfig
-	type plain SDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-	if c.Project == "" {
-		return errors.New("GCE SD configuration requires a project")
-	}
-	if c.Zone == "" {
-		return errors.New("GCE SD configuration requires a zone")
-	}
-	return nil
-}
-
 // Discovery periodically performs GCE-SD requests. It implements
 // the Discoverer interface.
 type Discovery struct {
@@ -108,7 +66,7 @@ type Discovery struct {
 }
 
 // NewDiscovery returns a new Discovery which periodically refreshes its targets.
-func NewDiscovery(conf SDConfig, logger log.Logger) (*Discovery, error) {
+func NewDiscovery(conf sdconfig.GCE, logger log.Logger) (*Discovery, error) {
 	d := &Discovery{
 		project:      conf.Project,
 		zone:         conf.Zone,

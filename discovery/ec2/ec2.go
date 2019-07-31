@@ -23,17 +23,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
-	config_util "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 
 	"github.com/simonpasquier/prometheus/discovery/refresh"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
-	"github.com/simonpasquier/prometheus/util/strutil"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/strutil"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
 
 const (
@@ -55,59 +54,6 @@ const (
 	subnetSeparator         = ","
 )
 
-// DefaultSDConfig is the default EC2 SD configuration.
-var DefaultSDConfig = SDConfig{
-	Port:            80,
-	RefreshInterval: model.Duration(60 * time.Second),
-}
-
-// Filter is the configuration for filtering EC2 instances.
-type Filter struct {
-	Name   string   `yaml:"name"`
-	Values []string `yaml:"values"`
-}
-
-// SDConfig is the configuration for EC2 based service discovery.
-type SDConfig struct {
-	Endpoint        string             `yaml:"endpoint"`
-	Region          string             `yaml:"region"`
-	AccessKey       string             `yaml:"access_key,omitempty"`
-	SecretKey       config_util.Secret `yaml:"secret_key,omitempty"`
-	Profile         string             `yaml:"profile,omitempty"`
-	RoleARN         string             `yaml:"role_arn,omitempty"`
-	RefreshInterval model.Duration     `yaml:"refresh_interval,omitempty"`
-	Port            int                `yaml:"port"`
-	Filters         []*Filter          `yaml:"filters"`
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *SDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = DefaultSDConfig
-	type plain SDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-	if c.Region == "" {
-		sess, err := session.NewSession()
-		if err != nil {
-			return err
-		}
-		metadata := ec2metadata.New(sess)
-		region, err := metadata.Region()
-		if err != nil {
-			return errors.New("EC2 SD configuration requires a region")
-		}
-		c.Region = region
-	}
-	for _, f := range c.Filters {
-		if len(f.Values) == 0 {
-			return errors.New("EC2 SD configuration filter values cannot be empty")
-		}
-	}
-	return nil
-}
-
 // Discovery periodically performs EC2-SD requests. It implements
 // the Discoverer interface.
 type Discovery struct {
@@ -117,11 +63,11 @@ type Discovery struct {
 	profile  string
 	roleARN  string
 	port     int
-	filters  []*Filter
+	filters  []*sdconfig.Filter
 }
 
 // NewDiscovery returns a new EC2Discovery which periodically refreshes its targets.
-func NewDiscovery(conf *SDConfig, logger log.Logger) *Discovery {
+func NewDiscovery(conf *sdconfig.EC2, logger log.Logger) *Discovery {
 	creds := credentials.NewStaticCredentials(conf.AccessKey, string(conf.SecretKey), "")
 	if conf.AccessKey == "" && conf.SecretKey == "" {
 		creds = nil

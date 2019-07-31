@@ -30,12 +30,12 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
-	config_util "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 
 	"github.com/simonpasquier/prometheus/discovery/refresh"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
-	"github.com/simonpasquier/prometheus/util/strutil"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/strutil"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
 
 const (
@@ -56,74 +56,15 @@ const (
 	authMethodManagedIdentity = "ManagedIdentity"
 )
 
-// DefaultSDConfig is the default Azure SD configuration.
-var DefaultSDConfig = SDConfig{
-	Port:                 80,
-	RefreshInterval:      model.Duration(5 * time.Minute),
-	Environment:          azure.PublicCloud.Name,
-	AuthenticationMethod: authMethodOAuth,
-}
-
-// SDConfig is the configuration for Azure based service discovery.
-type SDConfig struct {
-	Environment          string             `yaml:"environment,omitempty"`
-	Port                 int                `yaml:"port"`
-	SubscriptionID       string             `yaml:"subscription_id"`
-	TenantID             string             `yaml:"tenant_id,omitempty"`
-	ClientID             string             `yaml:"client_id,omitempty"`
-	ClientSecret         config_util.Secret `yaml:"client_secret,omitempty"`
-	RefreshInterval      model.Duration     `yaml:"refresh_interval,omitempty"`
-	AuthenticationMethod string             `yaml:"authentication_method,omitempty"`
-}
-
-func validateAuthParam(param, name string) error {
-	if len(param) == 0 {
-		return errors.Errorf("azure SD configuration requires a %s", name)
-	}
-	return nil
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface.
-func (c *SDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	*c = DefaultSDConfig
-	type plain SDConfig
-	err := unmarshal((*plain)(c))
-	if err != nil {
-		return err
-	}
-
-	if err = validateAuthParam(c.SubscriptionID, "subscription_id"); err != nil {
-		return err
-	}
-
-	if c.AuthenticationMethod == authMethodOAuth {
-		if err = validateAuthParam(c.TenantID, "tenant_id"); err != nil {
-			return err
-		}
-		if err = validateAuthParam(c.ClientID, "client_id"); err != nil {
-			return err
-		}
-		if err = validateAuthParam(string(c.ClientSecret), "client_secret"); err != nil {
-			return err
-		}
-	}
-
-	if c.AuthenticationMethod != authMethodOAuth && c.AuthenticationMethod != authMethodManagedIdentity {
-		return errors.Errorf("unknown authentication_type %q. Supported types are %q or %q", c.AuthenticationMethod, authMethodOAuth, authMethodManagedIdentity)
-	}
-
-	return nil
-}
-
 type Discovery struct {
 	*refresh.Discovery
 	logger log.Logger
-	cfg    *SDConfig
+	cfg    *sdconfig.Azure
 	port   int
 }
 
 // NewDiscovery returns a new AzureDiscovery which periodically refreshes its targets.
-func NewDiscovery(cfg *SDConfig, logger log.Logger) *Discovery {
+func NewDiscovery(cfg *sdconfig.Azure, logger log.Logger) *Discovery {
 	if logger == nil {
 		logger = log.NewNopLogger()
 	}
@@ -150,7 +91,7 @@ type azureClient struct {
 }
 
 // createAzureClient is a helper function for creating an Azure compute client to ARM.
-func createAzureClient(cfg SDConfig) (azureClient, error) {
+func createAzureClient(cfg sdconfig.Azure) (azureClient, error) {
 	env, err := azure.EnvironmentFromName(cfg.Environment)
 	if err != nil {
 		return azureClient{}, err
