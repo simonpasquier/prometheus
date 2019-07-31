@@ -33,12 +33,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
 
-	"github.com/prometheus/prometheus/pkg/gate"
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/pkg/timestamp"
-	"github.com/prometheus/prometheus/pkg/value"
-	"github.com/prometheus/prometheus/storage"
-	"github.com/prometheus/prometheus/util/stats"
+	"github.com/simonpasquier/prometheus/pkg/gate"
+	"github.com/simonpasquier/prometheus/pkg/labels"
+	"github.com/simonpasquier/prometheus/pkg/timestamp"
+	"github.com/simonpasquier/prometheus/pkg/value"
+	"github.com/simonpasquier/prometheus/storage"
+	"github.com/simonpasquier/prometheus/util/stats"
 )
 
 const (

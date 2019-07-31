@@ -17,8 +17,8 @@ import (
 	"context"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/storage"
+	"github.com/simonpasquier/prometheus/pkg/labels"
+	"github.com/simonpasquier/prometheus/storage"
 )
 
 var remoteReadQueries = prometheus.NewGaugeVec(

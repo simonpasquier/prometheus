@@ -30,8 +30,8 @@ import (
 	config_util "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 
-	"github.com/prometheus/prometheus/discovery/refresh"
-	"github.com/prometheus/prometheus/discovery/targetgroup"
+	"github.com/simonpasquier/prometheus/discovery/refresh"
+	"github.com/simonpasquier/prometheus/discovery/targetgroup"
 )
 
 const (

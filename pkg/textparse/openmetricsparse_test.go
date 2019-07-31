@@ -17,7 +17,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/prometheus/prometheus/pkg/labels"
+	"github.com/simonpasquier/prometheus/pkg/labels"
 	"github.com/stretchr/testify/require"
 )
 

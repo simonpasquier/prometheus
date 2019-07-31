@@ -19,9 +19,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/prompb"
-	"github.com/prometheus/prometheus/storage"
+	"github.com/simonpasquier/prometheus/pkg/labels"
+	"github.com/simonpasquier/prometheus/prompb"
+	"github.com/simonpasquier/prometheus/storage"
 )
 
 func mustNewLabelMatcher(mt labels.MatchType, name, val string) *labels.Matcher {

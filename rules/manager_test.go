@@ -23,12 +23,12 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/common/model"
 
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/pkg/timestamp"
-	"github.com/prometheus/prometheus/pkg/value"
-	"github.com/prometheus/prometheus/promql"
-	"github.com/prometheus/prometheus/storage"
-	"github.com/prometheus/prometheus/util/testutil"
+	"github.com/simonpasquier/prometheus/pkg/labels"
+	"github.com/simonpasquier/prometheus/pkg/timestamp"
+	"github.com/simonpasquier/prometheus/pkg/value"
+	"github.com/simonpasquier/prometheus/promql"
+	"github.com/simonpasquier/prometheus/storage"
+	"github.com/simonpasquier/prometheus/util/testutil"
 )
 
 func TestAlertingRule(t *testing.T) {

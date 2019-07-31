@@ -24,20 +24,20 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 
-	sd_config "github.com/prometheus/prometheus/discovery/config"
-	"github.com/prometheus/prometheus/discovery/targetgroup"
+	sd_config "github.com/simonpasquier/prometheus/discovery/config"
+	"github.com/simonpasquier/prometheus/discovery/targetgroup"
 
-	"github.com/prometheus/prometheus/discovery/azure"
-	"github.com/prometheus/prometheus/discovery/consul"
-	"github.com/prometheus/prometheus/discovery/dns"
-	"github.com/prometheus/prometheus/discovery/ec2"
-	"github.com/prometheus/prometheus/discovery/file"
-	"github.com/prometheus/prometheus/discovery/gce"
-	"github.com/prometheus/prometheus/discovery/kubernetes"
-	"github.com/prometheus/prometheus/discovery/marathon"
-	"github.com/prometheus/prometheus/discovery/openstack"
-	"github.com/prometheus/prometheus/discovery/triton"
-	"github.com/prometheus/prometheus/discovery/zookeeper"
+	"github.com/simonpasquier/prometheus/discovery/azure"
+	"github.com/simonpasquier/prometheus/discovery/consul"
+	"github.com/simonpasquier/prometheus/discovery/dns"
+	"github.com/simonpasquier/prometheus/discovery/ec2"
+	"github.com/simonpasquier/prometheus/discovery/file"
+	"github.com/simonpasquier/prometheus/discovery/gce"
+	"github.com/simonpasquier/prometheus/discovery/kubernetes"
+	"github.com/simonpasquier/prometheus/discovery/marathon"
+	"github.com/simonpasquier/prometheus/discovery/openstack"
+	"github.com/simonpasquier/prometheus/discovery/triton"
+	"github.com/simonpasquier/prometheus/discovery/zookeeper"
 )
 
 var (

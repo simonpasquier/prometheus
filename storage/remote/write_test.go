@@ -18,9 +18,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/prometheus/prometheus/config"
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/util/testutil"
+	"github.com/simonpasquier/prometheus/config"
+	"github.com/simonpasquier/prometheus/pkg/labels"
+	"github.com/simonpasquier/prometheus/util/testutil"
 )
 
 func TestWriteStorageLifecycle(t *testing.T) {

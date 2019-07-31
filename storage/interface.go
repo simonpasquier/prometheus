@@ -17,7 +17,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/prometheus/prometheus/pkg/labels"
+	"github.com/simonpasquier/prometheus/pkg/labels"
 )
 
 // The errors exposed.

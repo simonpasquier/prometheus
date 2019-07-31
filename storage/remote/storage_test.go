@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/prometheus/config"
-	"github.com/prometheus/prometheus/util/testutil"
+	"github.com/simonpasquier/prometheus/config"
+	"github.com/simonpasquier/prometheus/util/testutil"
 )
 
 func TestStorageLifecycle(t *testing.T) {

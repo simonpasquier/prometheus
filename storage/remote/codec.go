@@ -25,9 +25,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
 
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/prompb"
-	"github.com/prometheus/prometheus/storage"
+	"github.com/simonpasquier/prometheus/pkg/labels"
+	"github.com/simonpasquier/prometheus/prompb"
+	"github.com/simonpasquier/prometheus/storage"
 )
 
 // decodeReadLimit is the maximum size of a read request body in bytes.
