@@ -28,8 +28,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/simonpasquier/prometheus/config"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
 	"github.com/simonpasquier/prometheus/pkg/labels"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 	"github.com/simonpasquier/prometheus/storage"
 )
 

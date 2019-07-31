@@ -48,17 +48,17 @@ import (
 	promlogflag "github.com/prometheus/common/promlog/flag"
 	"github.com/simonpasquier/prometheus/config"
 	"github.com/simonpasquier/prometheus/discovery"
-	sd_config "github.com/simonpasquier/prometheus/discovery/config"
 	"github.com/simonpasquier/prometheus/notifier"
 	"github.com/simonpasquier/prometheus/pkg/relabel"
 	prom_runtime "github.com/simonpasquier/prometheus/pkg/runtime"
 	"github.com/simonpasquier/prometheus/promql"
 	"github.com/simonpasquier/prometheus/rules"
 	"github.com/simonpasquier/prometheus/scrape"
+	"github.com/simonpasquier/prometheus/sdk/sdconfig"
+	"github.com/simonpasquier/prometheus/sdk/strutil"
 	"github.com/simonpasquier/prometheus/storage"
 	"github.com/simonpasquier/prometheus/storage/remote"
 	"github.com/simonpasquier/prometheus/storage/tsdb"
-	"github.com/simonpasquier/prometheus/util/strutil"
 	"github.com/simonpasquier/prometheus/web"
 )
 
@@ -421,7 +421,7 @@ func main() {
 		// they need to read the most updated config when receiving the new targets list.
 		scrapeManager.ApplyConfig,
 		func(cfg *config.Config) error {
-			c := make(map[string]sd_config.ServiceDiscoveryConfig)
+			c := make(map[string]sdconfig.ServiceDiscoveryConfig)
 			for _, v := range cfg.ScrapeConfigs {
 				c[v.JobName] = v.ServiceDiscoveryConfig
 			}
@@ -429,7 +429,7 @@ func main() {
 		},
 		notifierManager.ApplyConfig,
 		func(cfg *config.Config) error {
-			c := make(map[string]sd_config.ServiceDiscoveryConfig)
+			c := make(map[string]sdconfig.ServiceDiscoveryConfig)
 			for _, v := range cfg.AlertingConfig.AlertmanagerConfigs {
 				// AlertmanagerConfigs doesn't hold an unique identifier so we use the config hash as the identifier.
 				b, err := json.Marshal(v)

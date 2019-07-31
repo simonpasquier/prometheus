@@ -26,7 +26,7 @@ import (
 	"github.com/simonpasquier/prometheus/pkg/labels"
 	"github.com/simonpasquier/prometheus/pkg/rulefmt"
 	"github.com/simonpasquier/prometheus/promql"
-	"github.com/simonpasquier/prometheus/util/strutil"
+	"github.com/simonpasquier/prometheus/sdk/strutil"
 )
 
 // A RecordingRule records its vector expression into new timeseries.

@@ -41,9 +41,9 @@ import (
 
 	"github.com/prometheus/alertmanager/api/v2/models"
 	"github.com/simonpasquier/prometheus/config"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
 	"github.com/simonpasquier/prometheus/pkg/labels"
 	"github.com/simonpasquier/prometheus/pkg/relabel"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 )
 
 const (

@@ -34,8 +34,8 @@ import (
 	"github.com/simonpasquier/prometheus/pkg/rulefmt"
 	"github.com/simonpasquier/prometheus/pkg/timestamp"
 	"github.com/simonpasquier/prometheus/promql"
+	"github.com/simonpasquier/prometheus/sdk/strutil"
 	"github.com/simonpasquier/prometheus/template"
-	"github.com/simonpasquier/prometheus/util/strutil"
 )
 
 const (

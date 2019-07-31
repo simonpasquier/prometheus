@@ -32,6 +32,7 @@ require (
 	github.com/shurcooL/httpfs v0.0.0-20171119174359-809beceb2371
 	github.com/shurcooL/vfsgen v0.0.0-20180825020608-02ddb050ef6b
 	github.com/simonpasquier/prometheus/discovery v0.0.0-00010101000000-000000000000
+	github.com/simonpasquier/prometheus/sdk v0.0.0-00010101000000-000000000000
 	github.com/soheilhy/cmux v0.1.4
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980

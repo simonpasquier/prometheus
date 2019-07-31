@@ -36,13 +36,13 @@ import (
 	"github.com/prometheus/common/version"
 
 	"github.com/simonpasquier/prometheus/config"
-	"github.com/simonpasquier/prometheus/discovery/targetgroup"
 	"github.com/simonpasquier/prometheus/pkg/labels"
 	"github.com/simonpasquier/prometheus/pkg/pool"
 	"github.com/simonpasquier/prometheus/pkg/relabel"
 	"github.com/simonpasquier/prometheus/pkg/textparse"
 	"github.com/simonpasquier/prometheus/pkg/timestamp"
 	"github.com/simonpasquier/prometheus/pkg/value"
+	"github.com/simonpasquier/prometheus/sdk/targetgroup"
 	"github.com/simonpasquier/prometheus/storage"
 )
 
