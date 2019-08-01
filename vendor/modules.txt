@@ -298,6 +298,18 @@ github.com/shurcooL/httpfs/union
 github.com/shurcooL/httpfs/vfsutil
 # github.com/shurcooL/vfsgen v0.0.0-20180825020608-02ddb050ef6b
 github.com/shurcooL/vfsgen
+# github.com/simonpasquier/prometheus/sdk v0.0.0-00010101000000-000000000000 => ./sdk
+github.com/simonpasquier/prometheus/sdk/promql
+github.com/simonpasquier/prometheus/sdk/storage
+github.com/simonpasquier/prometheus/sdk/storage/tsdb
+github.com/simonpasquier/prometheus/sdk/util/strutil
+github.com/simonpasquier/prometheus/sdk/labels
+github.com/simonpasquier/prometheus/sdk/timestamp
+github.com/simonpasquier/prometheus/sdk/value
+github.com/simonpasquier/prometheus/sdk/textparse
+github.com/simonpasquier/prometheus/sdk/gate
+github.com/simonpasquier/prometheus/sdk/util/stats
+github.com/simonpasquier/prometheus/sdk/util/testutil
 # github.com/soheilhy/cmux v0.1.4
 github.com/soheilhy/cmux
 # github.com/stretchr/testify v1.3.0
