@@ -17,7 +17,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/prometheus/prometheus/util/testutil"
+	"github.com/simonpasquier/prometheus/sdk/util/testutil"
 )
 
 func TestTargetGroupStrictJsonUnmarshal(t *testing.T) {

@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prometheus/prometheus/util/testutil"
+	"github.com/simonpasquier/prometheus/sdk/util/testutil"
 )
 
 func TestParseFileSuccess(t *testing.T) {

@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/discovery/targetgroup"
+	"github.com/simonpasquier/prometheus/discovery/targetgroup"
 )
 
 var (

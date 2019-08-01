@@ -18,10 +18,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/pkg/timestamp"
-	"github.com/prometheus/prometheus/promql"
-	"github.com/prometheus/prometheus/util/testutil"
+	"github.com/simonpasquier/prometheus/sdk/labels"
+	"github.com/simonpasquier/prometheus/sdk/promql"
+	"github.com/simonpasquier/prometheus/sdk/timestamp"
+	"github.com/simonpasquier/prometheus/sdk/util/testutil"
 )
 
 func TestRuleEval(t *testing.T) {

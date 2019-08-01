@@ -18,9 +18,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/prompb"
-	"github.com/prometheus/prometheus/storage"
+	"github.com/simonpasquier/prometheus/prompb"
+	"github.com/simonpasquier/prometheus/sdk/labels"
+	"github.com/simonpasquier/prometheus/sdk/storage"
 )
 
 func TestValidateLabelsAndMetricName(t *testing.T) {

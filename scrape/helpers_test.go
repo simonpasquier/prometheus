@@ -14,8 +14,8 @@
 package scrape
 
 import (
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/storage"
+	"github.com/simonpasquier/prometheus/sdk/labels"
+	"github.com/simonpasquier/prometheus/sdk/storage"
 )
 
 type nopAppendable struct{}

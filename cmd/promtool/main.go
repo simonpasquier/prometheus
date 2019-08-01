@@ -37,9 +37,9 @@ import (
 	"github.com/prometheus/common/version"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/prometheus/prometheus/config"
-	"github.com/prometheus/prometheus/pkg/rulefmt"
-	"github.com/prometheus/prometheus/util/promlint"
+	"github.com/simonpasquier/prometheus/config"
+	"github.com/simonpasquier/prometheus/pkg/rulefmt"
+	"github.com/simonpasquier/prometheus/util/promlint"
 )
 
 func main() {

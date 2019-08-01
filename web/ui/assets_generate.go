@@ -21,8 +21,8 @@ import (
 
 	"github.com/shurcooL/vfsgen"
 
-	"github.com/prometheus/prometheus/pkg/modtimevfs"
-	"github.com/prometheus/prometheus/web/ui"
+	"github.com/simonpasquier/prometheus/pkg/modtimevfs"
+	"github.com/simonpasquier/prometheus/web/ui"
 )
 
 func main() {
