@@ -79,6 +79,10 @@ var (
 		Name: "prometheus_config_last_reload_success_timestamp_seconds",
 		Help: "Timestamp of the last successful configuration reload.",
 	})
+	configDuration = prometheus.NewSummary(prometheus.SummaryOpts{
+		Name: "prometheus_config_reload_duration_seconds",
+		Help: "Summary of configuration reload durations.",
+	})
 
 	defaultRetentionString   = "15d"
 	defaultRetentionDuration model.Duration
@@ -507,8 +511,7 @@ func main() {
 		},
 	}
 
-	prometheus.MustRegister(configSuccess)
-	prometheus.MustRegister(configSuccessTime)
+	prometheus.MustRegister(configSuccess, configSuccessTime, configDuration)
 
 	// Start all components while we wait for TSDB to open but only load
 	// initial config and mark ourselves as ready after it completed.
@@ -846,6 +849,9 @@ type reloader struct {
 
 func reloadConfig(filename string, logger log.Logger, noStepSuqueryInterval *safePromQLNoStepSubqueryInterval, rls ...reloader) (err error) {
 	start := time.Now()
+	defer func() {
+		configDuration.Observe(time.Since(start).Seconds())
+	}()
 	timings := []interface{}{}
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
 
