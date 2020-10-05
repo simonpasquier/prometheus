@@ -14,6 +14,7 @@
 package kubernetes
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prometheus/common/model"
@@ -78,7 +79,7 @@ func TestEndpointsDiscoveryBeforeRun(t *testing.T) {
 		discovery: n,
 		beforeRun: func() {
 			obj := makeEndpoints()
-			c.CoreV1().Endpoints(obj.Namespace).Create(obj)
+			c.CoreV1().Endpoints(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 		},
 		expectedMaxItems: 1,
 		expectedRes: map[string]*targetgroup.Group{
@@ -184,7 +185,7 @@ func TestEndpointsDiscoveryAdd(t *testing.T) {
 					},
 				},
 			}
-			c.CoreV1().Endpoints(obj.Namespace).Create(obj)
+			c.CoreV1().Endpoints(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 		},
 		expectedMaxItems: 1,
 		expectedRes: map[string]*targetgroup.Group{
@@ -241,7 +242,7 @@ func TestEndpointsDiscoveryDelete(t *testing.T) {
 		discovery: n,
 		afterStart: func() {
 			obj := makeEndpoints()
-			c.CoreV1().Endpoints(obj.Namespace).Delete(obj.Name, &metav1.DeleteOptions{})
+			c.CoreV1().Endpoints(obj.Namespace).Delete(context.TODO(), obj.Name, metav1.DeleteOptions{})
 		},
 		expectedMaxItems: 2,
 		expectedRes: map[string]*targetgroup.Group{
@@ -294,7 +295,7 @@ func TestEndpointsDiscoveryUpdate(t *testing.T) {
 					},
 				},
 			}
-			c.CoreV1().Endpoints(obj.Namespace).Update(obj)
+			c.CoreV1().Endpoints(obj.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
 		},
 		expectedMaxItems: 2,
 		expectedRes: map[string]*targetgroup.Group{
@@ -336,7 +337,7 @@ func TestEndpointsDiscoveryEmptySubsets(t *testing.T) {
 				},
 				Subsets: []v1.EndpointSubset{},
 			}
-			c.CoreV1().Endpoints(obj.Namespace).Update(obj)
+			c.CoreV1().Endpoints(obj.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
 		},
 		expectedMaxItems: 2,
 		expectedRes: map[string]*targetgroup.Group{
@@ -366,7 +367,7 @@ func TestEndpointsDiscoveryWithService(t *testing.T) {
 					},
 				},
 			}
-			c.CoreV1().Services(obj.Namespace).Create(obj)
+			c.CoreV1().Services(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 		},
 		expectedMaxItems: 1,
 		expectedRes: map[string]*targetgroup.Group{
@@ -421,7 +422,7 @@ func TestEndpointsDiscoveryWithServiceUpdate(t *testing.T) {
 					},
 				},
 			}
-			c.CoreV1().Services(obj.Namespace).Create(obj)
+			c.CoreV1().Services(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 		},
 		afterStart: func() {
 			obj := &v1.Service{
@@ -434,7 +435,7 @@ func TestEndpointsDiscoveryWithServiceUpdate(t *testing.T) {
 					},
 				},
 			}
-			c.CoreV1().Services(obj.Namespace).Update(obj)
+			c.CoreV1().Services(obj.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
 		},
 		expectedMaxItems: 2,
 		expectedRes: map[string]*targetgroup.Group{
