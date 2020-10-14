@@ -14,6 +14,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -101,9 +102,9 @@ func TestServiceDiscoveryAdd(t *testing.T) {
 		discovery: n,
 		afterStart: func() {
 			obj := makeService()
-			c.CoreV1().Services(obj.Namespace).Create(obj)
+			c.CoreV1().Services(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 			obj = makeExternalService()
-			c.CoreV1().Services(obj.Namespace).Create(obj)
+			c.CoreV1().Services(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 		},
 		expectedMaxItems: 2,
 		expectedRes: map[string]*targetgroup.Group{
@@ -148,7 +149,7 @@ func TestServiceDiscoveryDelete(t *testing.T) {
 		discovery: n,
 		afterStart: func() {
 			obj := makeService()
-			c.CoreV1().Services(obj.Namespace).Delete(obj.Name, &metav1.DeleteOptions{})
+			c.CoreV1().Services(obj.Namespace).Delete(context.TODO(), obj.Name, metav1.DeleteOptions{})
 		},
 		expectedMaxItems: 2,
 		expectedRes: map[string]*targetgroup.Group{
@@ -166,7 +167,7 @@ func TestServiceDiscoveryUpdate(t *testing.T) {
 		discovery: n,
 		afterStart: func() {
 			obj := makeMultiPortService()
-			c.CoreV1().Services(obj.Namespace).Update(obj)
+			c.CoreV1().Services(obj.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
 		},
 		expectedMaxItems: 2,
 		expectedRes: map[string]*targetgroup.Group{
@@ -208,7 +209,7 @@ func TestServiceDiscoveryNamespaces(t *testing.T) {
 			for _, ns := range []string{"ns1", "ns2"} {
 				obj := makeService()
 				obj.Namespace = ns
-				c.CoreV1().Services(obj.Namespace).Create(obj)
+				c.CoreV1().Services(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 			}
 		},
 		expectedMaxItems: 2,
