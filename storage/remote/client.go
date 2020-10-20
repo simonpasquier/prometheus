@@ -38,7 +38,7 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 )
 
-const maxErrMsgLen = 256
+const maxErrMsgLen = 512
 
 var UserAgent = fmt.Sprintf("Prometheus/%s", version.Version)
 
@@ -102,8 +102,8 @@ type ReadClient interface {
 	Read(ctx context.Context, query *prompb.Query) (*prompb.QueryResult, error)
 }
 
-// newReadClient creates a new client for remote read.
-func newReadClient(name string, conf *ClientConfig) (ReadClient, error) {
+// NewReadClient creates a new client for remote read.
+func NewReadClient(name string, conf *ClientConfig) (ReadClient, error) {
 	httpClient, err := config_util.NewClientFromConfig(conf.HTTPClientConfig, "remote_storage_read_client", false, false)
 	if err != nil {
 		return nil, err

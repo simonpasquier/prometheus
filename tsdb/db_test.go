@@ -196,7 +196,7 @@ func TestDataAvailableOnlyAfterCommit(t *testing.T) {
 func TestNoPanicAfterWALCorrutpion(t *testing.T) {
 	db := openTestDB(t, &Options{WALSegmentSize: 32 * 1024}, nil)
 
-	// Append until the the first mmaped head chunk.
+	// Append until the first mmaped head chunk.
 	// This is to ensure that all samples can be read from the mmaped chunks when the WAL is corrupted.
 	var expSamples []tsdbutil.Sample
 	var maxt int64
@@ -1261,7 +1261,7 @@ func TestSizeRetention(t *testing.T) {
 	testutil.Equals(t, expSize, actSize, "registered size doesn't match actual disk size")
 
 	// Create a WAL checkpoint, and compare sizes.
-	first, last, err := db.Head().wal.Segments()
+	first, last, err := wal.Segments(db.Head().wal.Dir())
 	testutil.Ok(t, err)
 	_, err = wal.Checkpoint(log.NewNopLogger(), db.Head().wal, first, last-1, func(x uint64) bool { return false }, 0)
 	testutil.Ok(t, err)
