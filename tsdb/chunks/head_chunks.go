@@ -104,10 +104,6 @@ type ChunkDiskMapper struct {
 	// from which chunks are served till they are flushed and are ready for m-mapping.
 	chunkBuffer *chunkBuffer
 
-	// The total size of bytes in the closed files.
-	// Needed to calculate the total size of all segments on disk.
-	size atomic.Int64
-
 	// If 'true', it indicated that the maxt of all the on-disk files were set
 	// after iterating through all the chunks in those files.
 	fileMaxtSet bool
@@ -167,6 +163,11 @@ func (cdm *ChunkDiskMapper) openMMapFiles() (returnErr error) {
 		return err
 	}
 
+	files, err = repairLastChunkFile(files)
+	if err != nil {
+		return err
+	}
+
 	chkFileIndices := make([]int, 0, len(files))
 	for seq, fn := range files {
 		f, err := fileutil.OpenMmapFile(fn)
@@ -177,8 +178,6 @@ func (cdm *ChunkDiskMapper) openMMapFiles() (returnErr error) {
 		cdm.mmappedChunkFiles[seq] = &mmappedChunkFile{byteSlice: realByteSlice(f.Bytes())}
 		chkFileIndices = append(chkFileIndices, seq)
 	}
-
-	cdm.size.Store(int64(0))
 
 	// Check for gaps in the files.
 	sort.Ints(chkFileIndices)
@@ -206,8 +205,6 @@ func (cdm *ChunkDiskMapper) openMMapFiles() (returnErr error) {
 		if v := int(b.byteSlice.Range(MagicChunksSize, MagicChunksSize+ChunksFormatVersionSize)[0]); v != chunksFormatV1 {
 			return errors.Errorf("%s: invalid chunk format version %d", files[i], v)
 		}
-
-		cdm.size.Add(int64(b.byteSlice.Len()))
 	}
 
 	return nil
@@ -226,7 +223,38 @@ func listChunkFiles(dir string) (map[int]string, error) {
 		}
 		res[int(seq)] = filepath.Join(dir, fi.Name())
 	}
+
 	return res, nil
+}
+
+// repairLastChunkFile deletes the last file if it's empty.
+// Because we don't fsync when creating these file, we could end
+// up with an empty file at the end during an abrupt shutdown.
+func repairLastChunkFile(files map[int]string) (_ map[int]string, returnErr error) {
+	lastFile := -1
+	for seq := range files {
+		if seq > lastFile {
+			lastFile = seq
+		}
+	}
+
+	if lastFile <= 0 {
+		return files, nil
+	}
+
+	info, err := os.Stat(files[lastFile])
+	if err != nil {
+		return files, errors.Wrap(err, "file stat during last head chunk file repair")
+	}
+	if info.Size() == 0 {
+		// Corrupt file, hence remove it.
+		if err := os.RemoveAll(files[lastFile]); err != nil {
+			return files, errors.Wrap(err, "delete corrupted, empty head chunk file during last file repair")
+		}
+		delete(files, lastFile)
+	}
+
+	return files, nil
 }
 
 // WriteChunk writes the chunk to the disk.
@@ -340,7 +368,6 @@ func (cdm *ChunkDiskMapper) cut() (returnErr error) {
 		}
 	}()
 
-	cdm.size.Add(cdm.curFileSize())
 	cdm.curFileNumBytes.Store(int64(n))
 
 	if cdm.curFile != nil {
@@ -696,7 +723,6 @@ func (cdm *ChunkDiskMapper) deleteFiles(removedFiles []int) error {
 			cdm.readPathMtx.Unlock()
 			return err
 		}
-		cdm.size.Sub(int64(cdm.mmappedChunkFiles[seq].byteSlice.Len()))
 		delete(cdm.mmappedChunkFiles, seq)
 		delete(cdm.closers, seq)
 	}
@@ -735,8 +761,8 @@ func (cdm *ChunkDiskMapper) DeleteCorrupted(originalErr error) error {
 }
 
 // Size returns the size of the chunk files.
-func (cdm *ChunkDiskMapper) Size() int64 {
-	return cdm.size.Load() + cdm.curFileSize()
+func (cdm *ChunkDiskMapper) Size() (int64, error) {
+	return fileutil.DirSize(cdm.dir.Name())
 }
 
 func (cdm *ChunkDiskMapper) curFileSize() int64 {
