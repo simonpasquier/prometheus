@@ -53,16 +53,16 @@ require (
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
 	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.18.6
-	k8s.io/apimachinery v0.18.6
+	k8s.io/api v0.18.9
+	k8s.io/apimachinery v0.18.9
 	k8s.io/client-go v0.0.0-20190620085101-78d2af792bab
 	k8s.io/klog v1.0.0
 )
 
 replace (
 	github.com/golang/lint => golang.org/x/lint v0.0.0-20190409202823-959b441ac422
-	k8s.io/api => k8s.io/api v0.18.6
-	k8s.io/apimachinery => k8s.io/apimachinery v0.18.6
-	k8s.io/client-go => k8s.io/client-go v0.18.6
+	k8s.io/api => k8s.io/api v0.18.9
+	k8s.io/apimachinery => k8s.io/apimachinery v0.18.9
+	k8s.io/client-go => k8s.io/client-go v0.18.9
 	k8s.io/klog => github.com/simonpasquier/klog-gokit v0.1.0
 )
