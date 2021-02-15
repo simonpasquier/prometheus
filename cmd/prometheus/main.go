@@ -753,6 +753,8 @@ func main() {
 					"AllowOverlappingBlocks", cfg.tsdb.AllowOverlappingBlocks,
 					"WALCompression", cfg.tsdb.WALCompression,
 				)
+				// For garbage collection.
+				runtime.GC()
 
 				startTimeMargin := int64(2 * time.Duration(cfg.tsdb.MinBlockDuration).Seconds() * 1000)
 				localStorage.Set(db, startTimeMargin)
