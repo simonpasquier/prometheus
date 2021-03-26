@@ -660,6 +660,7 @@ func main() {
 				if err != nil {
 					return errors.Wrapf(err, "opening storage failed")
 				}
+				runtime.GC()
 				level.Info(logger).Log("fs_type", prom_runtime.Statfs(cfg.localStoragePath))
 				level.Info(logger).Log("msg", "TSDB started")
 				level.Debug(logger).Log("msg", "TSDB options",
