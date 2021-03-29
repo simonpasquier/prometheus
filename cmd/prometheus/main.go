@@ -732,6 +732,7 @@ func main() {
 					level.Info(logger).Log("fs_type", fsType)
 				}
 
+				runtime.GC()
 				level.Info(logger).Log("msg", "TSDB started")
 				level.Debug(logger).Log("msg", "TSDB options",
 					"MinBlockDuration", cfg.tsdb.MinBlockDuration,
