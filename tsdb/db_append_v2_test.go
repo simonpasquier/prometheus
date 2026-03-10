@@ -372,7 +372,7 @@ func TestDeleteSimple_AppendV2(t *testing.T) {
 
 			expSamples := make([]chunks.Sample, 0, len(c.remaint))
 			for _, ts := range c.remaint {
-				expSamples = append(expSamples, sample{ts, smpls[ts], nil, nil})
+				expSamples = append(expSamples, sample{0, ts, smpls[ts], nil, nil})
 			}
 
 			expss := newMockSeriesSet([]storage.Series{
@@ -507,7 +507,7 @@ func TestSkippingInvalidValuesInSameTxn_AppendV2(t *testing.T) {
 	ssMap := query(t, q, labels.MustNewMatcher(labels.MatchEqual, "a", "b"))
 
 	require.Equal(t, map[string][]chunks.Sample{
-		labels.New(labels.Label{Name: "a", Value: "b"}).String(): {sample{0, 1, nil, nil}},
+		labels.New(labels.Label{Name: "a", Value: "b"}).String(): {sample{0, 0, 1, nil, nil}},
 	}, ssMap)
 
 	// Append Out of Order Value.
@@ -524,7 +524,7 @@ func TestSkippingInvalidValuesInSameTxn_AppendV2(t *testing.T) {
 	ssMap = query(t, q, labels.MustNewMatcher(labels.MatchEqual, "a", "b"))
 
 	require.Equal(t, map[string][]chunks.Sample{
-		labels.New(labels.Label{Name: "a", Value: "b"}).String(): {sample{0, 1, nil, nil}, sample{10, 3, nil, nil}},
+		labels.New(labels.Label{Name: "a", Value: "b"}).String(): {sample{0, 0, 1, nil, nil}, sample{0, 10, 3, nil, nil}},
 	}, ssMap)
 }
 
@@ -669,7 +669,7 @@ func TestDB_SnapshotWithDelete_AppendV2(t *testing.T) {
 
 			expSamples := make([]chunks.Sample, 0, len(c.remaint))
 			for _, ts := range c.remaint {
-				expSamples = append(expSamples, sample{ts, smpls[ts], nil, nil})
+				expSamples = append(expSamples, sample{0, ts, smpls[ts], nil, nil})
 			}
 
 			expss := newMockSeriesSet([]storage.Series{
@@ -772,7 +772,7 @@ func TestDB_e2e_AppendV2(t *testing.T) {
 		for range numDatapoints {
 			v := rand.Float64()
 
-			series = append(series, sample{ts, v, nil, nil})
+			series = append(series, sample{0, ts, v, nil, nil})
 
 			_, err := app.Append(0, lset, 0, ts, v, nil, nil, storage.AOptions{})
 			require.NoError(t, err)
@@ -1094,7 +1094,7 @@ func TestTombstoneClean_AppendV2(t *testing.T) {
 
 		expSamples := make([]chunks.Sample, 0, len(c.remaint))
 		for _, ts := range c.remaint {
-			expSamples = append(expSamples, sample{ts, smpls[ts], nil, nil})
+			expSamples = append(expSamples, sample{0, ts, smpls[ts], nil, nil})
 		}
 
 		expss := newMockSeriesSet([]storage.Series{
@@ -2310,7 +2310,7 @@ func TestCompactHead_AppendV2(t *testing.T) {
 		val := rand.Float64()
 		_, err := app.Append(0, labels.FromStrings("a", "b"), 0, int64(i), val, nil, nil, storage.AOptions{})
 		require.NoError(t, err)
-		expSamples = append(expSamples, sample{int64(i), val, nil, nil})
+		expSamples = append(expSamples, sample{0, int64(i), val, nil, nil})
 	}
 	require.NoError(t, app.Commit())
 
@@ -2337,7 +2337,7 @@ func TestCompactHead_AppendV2(t *testing.T) {
 		series = seriesSet.At().Iterator(series)
 		for series.Next() == chunkenc.ValFloat {
 			time, val := series.At()
-			actSamples = append(actSamples, sample{time, val, nil, nil})
+			actSamples = append(actSamples, sample{0, time, val, nil, nil})
 		}
 		require.NoError(t, series.Err())
 	}
@@ -7047,97 +7047,6 @@ func testPanicOnApplyConfigAppendV2(t *testing.T, scenario sampleTypeScenario) {
 		},
 	})
 	require.NoError(t, err)
-}
-
-func TestDiskFillingUpAfterDisablingOOO_AppendV2(t *testing.T) {
-	t.Parallel()
-	for name, scenario := range sampleTypeScenarios {
-		t.Run(name, func(t *testing.T) {
-			testDiskFillingUpAfterDisablingOOOAppenderV2(t, scenario)
-		})
-	}
-}
-
-func testDiskFillingUpAfterDisablingOOOAppenderV2(t *testing.T, scenario sampleTypeScenario) {
-	t.Parallel()
-	ctx := context.Background()
-
-	opts := DefaultOptions()
-	opts.OutOfOrderTimeWindow = 60 * time.Minute.Milliseconds()
-
-	db := newTestDB(t, withOpts(opts))
-	db.DisableCompactions()
-
-	series1 := labels.FromStrings("foo", "bar1")
-	var allSamples []chunks.Sample
-	addSamples := func(fromMins, toMins int64) {
-		app := db.AppenderV2(context.Background())
-		for m := fromMins; m <= toMins; m++ {
-			ts := m * time.Minute.Milliseconds()
-			_, s, err := scenario.appendFunc(storage.AppenderV2AsLimitedV1(app), series1, ts, ts)
-			require.NoError(t, err)
-			allSamples = append(allSamples, s)
-		}
-		require.NoError(t, app.Commit())
-	}
-
-	// In-order samples.
-	addSamples(290, 300)
-	// OOO samples.
-	addSamples(250, 299)
-
-	// Restart DB with OOO disabled.
-	require.NoError(t, db.Close())
-
-	opts.OutOfOrderTimeWindow = 0
-	db = newTestDB(t, withDir(db.Dir()), withOpts(opts))
-	db.DisableCompactions()
-
-	ms := db.head.series.getByHash(series1.Hash(), series1)
-	require.NotEmpty(t, ms.ooo.oooMmappedChunks, "OOO mmap chunk was not replayed")
-
-	checkMmapFileContents := func(contains, notContains []string) {
-		mmapDir := mmappedChunksDir(db.head.opts.ChunkDirRoot)
-		files, err := os.ReadDir(mmapDir)
-		require.NoError(t, err)
-
-		fnames := make([]string, 0, len(files))
-		for _, f := range files {
-			fnames = append(fnames, f.Name())
-		}
-
-		for _, f := range contains {
-			require.Contains(t, fnames, f)
-		}
-		for _, f := range notContains {
-			require.NotContains(t, fnames, f)
-		}
-	}
-
-	// Add in-order samples until ready for compaction..
-	addSamples(301, 500)
-
-	// Check that m-map files gets deleted properly after compactions.
-
-	db.head.mmapHeadChunks()
-	checkMmapFileContents([]string{"000001", "000002"}, nil)
-	require.NoError(t, db.Compact(ctx))
-	checkMmapFileContents([]string{"000002"}, []string{"000001"})
-	require.Nil(t, ms.ooo, "OOO mmap chunk was not compacted")
-
-	addSamples(501, 650)
-	db.head.mmapHeadChunks()
-	checkMmapFileContents([]string{"000002", "000003"}, []string{"000001"})
-	require.NoError(t, db.Compact(ctx))
-	checkMmapFileContents(nil, []string{"000001", "000002", "000003"})
-
-	// Verify that WBL is empty.
-	files, err := os.ReadDir(db.head.wbl.Dir())
-	require.NoError(t, err)
-	require.Len(t, files, 1) // Last empty file after compaction.
-	finfo, err := files[0].Info()
-	require.NoError(t, err)
-	require.Equal(t, int64(0), finfo.Size())
 }
 
 func TestHistogramAppendAndQuery_AppendV2(t *testing.T) {

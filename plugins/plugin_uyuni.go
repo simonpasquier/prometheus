@@ -1,4 +1,4 @@
-// Copyright 2025 The Prometheus Authors
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,19 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !goexperiment.synctest && !go1.25
+//go:build !remove_all_sd || enable_uyuni_sd
 
-package synctest
+package plugins
 
 import (
-	"testing"
+	_ "github.com/prometheus/prometheus/discovery/uyuni" // Register uyuni plugin.
 )
-
-func Test(t *testing.T, _ func(t *testing.T)) {
-	t.Skip("goexperiment.synctest is not enabled")
-}
-
-func Wait() {
-	// It isn't meant to be called outside of Test().
-	panic("goexperiment.synctest is not enabled")
-}

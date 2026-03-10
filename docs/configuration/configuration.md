@@ -159,6 +159,12 @@ global:
   # native histogram with custom buckets.
   [ always_scrape_classic_histograms: <boolean> | default = false ]
 
+  # When enabled, Prometheus stores additional time series for each scrape:
+  # scrape_timeout_seconds, scrape_sample_limit, and scrape_body_size_bytes.
+  # These metrics help monitor how close targets are to their configured limits.
+  # This option can be overridden per scrape config.
+  [ extra_scrape_metrics: <boolean> | default = false ]
+
   # The following explains the various combinations of the last three options
   # in various exposition cases.
   #
@@ -647,6 +653,12 @@ metric_relabel_configs:
 # native histogram with custom buckets.
 [ always_scrape_classic_histograms: <boolean> | default = <global.always_scrape_classic_histograms> ]
 
+# When enabled, Prometheus stores additional time series for this scrape job:
+# scrape_timeout_seconds, scrape_sample_limit, and scrape_body_size_bytes.
+# These metrics help monitor how close targets are to their configured limits.
+# If not set, inherits the value from the global configuration.
+[ extra_scrape_metrics: <boolean> | default = <global.extra_scrape_metrics> ]
+
 # See global configuration above for further explanations of how the last three
 # options combine their effects.
 
@@ -919,11 +931,16 @@ The following meta labels are available on targets during [relabeling](#relabel_
 
 #### `ecs`
 
-The `ecs` role discovers targets from AWS ECS containers. The private IP address is used by default, but may be changed to
-the public IP address with relabeling.
+The `ecs` role discovers targets from AWS ECS containers. 
 
-The IAM credentials used must have the following permissions to discover
-scrape targets:
+ECS service discovery supports all ECS networking modes:
+- **awsvpc mode** (Fargate and EC2 with ENI): Uses the task's private IP address from its elastic network interface
+- **bridge mode** (EC2): Uses the EC2 host instance's private IP address
+- **host mode** (EC2): Uses the EC2 host instance's private IP address
+
+The private IP address is used by default, but may be changed to the public IP address with relabeling.
+
+The IAM credentials used must have the following permissions to discover scrape targets:
 
 - `ecs:ListClusters`
 - `ecs:DescribeClusters`
@@ -931,6 +948,9 @@ scrape targets:
 - `ecs:DescribeServices`
 - `ecs:ListTasks`
 - `ecs:DescribeTasks`
+- `ecs:DescribeContainerInstances` (required for EC2 launch type tasks)
+- `ec2:DescribeInstances` (required for EC2 launch type tasks)
+- `ec2:DescribeNetworkInterfaces` (required to get public IP for awsvpc mode tasks)
 
 The following meta labels are available on targets during [relabeling](#relabel_config):
 
@@ -952,15 +972,68 @@ The following meta labels are available on targets during [relabeling](#relabel_
 * `__meta_ecs_subnet_id`: the subnet ID where the task is running
 * `__meta_ecs_availability_zone`: the availability zone where the task is running
 * `__meta_ecs_region`: the AWS region
+* `__meta_ecs_public_ip`: the public IP address (from ENI for awsvpc mode, from EC2 instance for bridge/host mode), if available
+* `__meta_ecs_network_mode`: the network mode of the task (awsvpc or bridge)
+* `__meta_ecs_container_instance_arn`: the ARN of the container instance (EC2 launch type only)
+* `__meta_ecs_ec2_instance_id`: the EC2 instance ID (EC2 launch type only)
+* `__meta_ecs_ec2_instance_type`: the EC2 instance type (EC2 launch type only)
+* `__meta_ecs_ec2_instance_private_ip`: the private IP address of the EC2 instance (EC2 launch type only)
+* `__meta_ecs_ec2_instance_public_ip`: the public IP address of the EC2 instance, if available (EC2 launch type only)
 * `__meta_ecs_tag_cluster_<tagkey>`: each cluster tag value, keyed by tag name
 * `__meta_ecs_tag_service_<tagkey>`: each service tag value, keyed by tag name
 * `__meta_ecs_tag_task_<tagkey>`: each task tag value, keyed by tag name
+* `__meta_ecs_tag_ec2_<tagkey>`: each EC2 instance tag value, keyed by tag name (EC2 launch type only)
+
+#### `msk`
+
+The `msk` role discovers targets from AWS MSK (Managed Streaming for Apache Kafka) provisioned clusters.
+
+**Important**: This service discovery only works with **provisioned clusters**. Serverless clusters are not supported as they do not expose individual broker nodes.
+
+Discovery includes:
+- **Broker nodes**: Kafka broker instances (supports both ZooKeeper-based and KRaft-based clusters)
+- **KRaft Controller nodes**: Controller instances (KRaft-based clusters only)
+
+Note: ZooKeeper nodes are not discoverable via the MSK API. For monitoring, MSK provides:
+- **JMX Exporter**: Available on both broker and KRaft controller nodes (when enabled)
+- **Node Exporter**: Available on broker nodes only (when enabled)
+
+The IAM credentials used must have the following permissions to discover
+scrape targets:
+
+- `kafka:DescribeClusterV2`
+- `kafka:ListClustersV2`
+- `kafka:ListNodes`
+
+The following meta labels are available on targets during [relabeling](#relabel_config):
+
+* `__meta_msk_cluster_name`: the name of the MSK cluster
+* `__meta_msk_cluster_arn`: the ARN of the MSK cluster
+* `__meta_msk_cluster_state`: the state of the MSK cluster (e.g., ACTIVE, CREATING, DELETING)
+* `__meta_msk_cluster_type`: the type of the MSK cluster (e.g., PROVISIONED, SERVERLESS)
+* `__meta_msk_cluster_version`: the current version of the MSK cluster
+* `__meta_msk_cluster_kafka_version`: the Kafka version running on the cluster
+* `__meta_msk_cluster_jmx_exporter_enabled`: whether JMX exporter is enabled on the cluster
+* `__meta_msk_cluster_configuration_arn`: the ARN of the MSK configuration
+* `__meta_msk_cluster_configuration_revision`: the revision of the MSK configuration
+* `__meta_msk_cluster_tag_<tagkey>`: each cluster tag value, keyed by tag name
+* `__meta_msk_node_type`: the type of the node (BROKER or CONTROLLER)
+* `__meta_msk_node_arn`: the ARN of the node
+* `__meta_msk_node_added_time`: the time the node was added to the cluster
+* `__meta_msk_node_instance_type`: the instance type of the node
+* `__meta_msk_node_attached_eni`: the ID of the attached ENI
+* `__meta_msk_broker_id`: the broker ID (broker nodes only)
+* `__meta_msk_broker_endpoint_index`: the index of the broker endpoint (broker nodes only)
+* `__meta_msk_broker_client_subnet`: the client subnet of the broker (broker nodes only)
+* `__meta_msk_broker_client_vpc_ip`: the VPC IP address of the broker (broker nodes only)
+* `__meta_msk_broker_node_exporter_enabled`: whether node exporter is enabled on brokers (broker nodes only)
+* `__meta_msk_controller_endpoint_index`: the index of the controller endpoint (controller nodes only)
 
 See below for the configuration options for AWS discovery:
 
 ```yaml
 # The AWS role to use for service discovery.
-# Must be one of: ec2, lightsail, or ecs.
+# Must be one of: ec2, lightsail, ecs, or msk.
 role: <string>
 
 # The AWS region. If blank, the region from the instance metadata is used.
@@ -996,7 +1069,7 @@ filters:
   [ - name: <string>
       values: <string>, [...] ]
 
-# List of ECS cluster ARNs to discover (ecs role only). If empty, all clusters in the region are discovered.
+# List of ECS or MSK cluster ARNs (ecs and msk roles only) to discover. If empty, all clusters in the region are discovered.
 # This can significantly improve performance when you only need to monitor specific clusters.
 [ clusters: [<string>, ...] ]
 
@@ -2945,6 +3018,11 @@ labels:
   [ <labelname>: <labelvalue> ... ]
 ```
 
+The special labels mentioned in the [relabeling](#relabel_config) section can also be
+used here to override the respective settings in the scrape configuration. This is
+especially useful when combined with any of the service discovery mechanisms that do not
+support these settings directly.
+
 ### `<relabel_config>`
 
 Relabeling is a powerful tool to dynamically rewrite the label set of a target before
@@ -2954,6 +3032,11 @@ in the configuration file.
 
 Initially, aside from the configured per-target labels, a target's `job`
 label is set to the `job_name` value of the respective scrape configuration.
+
+You can also use special labels like `__address__`, `__scheme__`, `__metrics_path__`,
+`__scrape_interval__`, `__scrape_timeout__` to customize the defined targets. These will
+override the respective settings in the scrape configuration.
+
 The `__address__` label is set to the `<host>:<port>` address of the target.
 After relabeling, the `instance` label is set to the value of `__address__` by default if
 it was not set during relabeling.
@@ -3467,6 +3550,19 @@ with this feature.
 # the agent's WAL to accept out-of-order samples that fall within the specified time window relative
 # to the timestamp of the last appended sample for the same series.
 [ out_of_order_time_window: <duration> | default = 0s ]
+
+# Configures the trigger point for compacting the stale series from the memory into persistent blocks
+# and remove those stale series from the memory.
+#
+# The threshold is a number between 0.0 and 1.0. It represents the ratio of stale series in the memory
+# to the total series in the memory. The stale series compaction is triggered when this ratio crosses
+# the configured threshold. It may not trigger the stale series compaction if the usual head compaction
+# is about to happen soon.
+#
+# If set to 0, stale series compaction is disabled.
+#
+# This is an experimental feature, this behaviour could change or be removed in the future.
+[ stale_series_compaction_threshold: <float> | default = 0 ]
 
 
 # Configures data retention settings for TSDB.
