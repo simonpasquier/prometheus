@@ -14,6 +14,8 @@ build:
         all:
             - netgo
             - builtinassets
+            - remove_all_sd           # Exclude all optional SDs
+            - enable_kubernetes_sd    # Re-enable only kubernetes
         windows:
             - builtinassets
     ldflags: |
